@@ -54,7 +54,7 @@ html = f"""
   }}
 
   .content {{
-    width: min(900px, 92vw);
+    width: 100%;
     margin: 0 auto;
   }}
 
@@ -63,6 +63,7 @@ html = f"""
     align-items: center;
     gap: 22px;
     width: fit-content;
+    max-width: 92%;
     margin: 0 auto;
   }}
 
@@ -80,11 +81,28 @@ html = f"""
     font-size: 38px;
     line-height: 1.2;
     font-weight: 700;
+    position: relative;
+    display: inline-block;
+    min-height: 1.2em;
+    white-space: nowrap;
+  }}
+
+  .hero-reserve {{
+    visibility: hidden;
+    white-space: nowrap;
+  }}
+
+  .hero-live {{
+    position: absolute;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
   }}
 
   .input-wrap {{
     margin-top: 46px;
-    width: 82%;
+    width: 72%;
+    max-width: 860px;
     margin-left: auto;
     margin-right: auto;
   }}
@@ -147,9 +165,10 @@ html = f"""
   @media (max-width: 900px) {{
     .page {{ padding-top: 48px; }}
     .hero-avatar {{ width: 76px; height: 76px; }}
+    .hero {{ width: fit-content; max-width: 94%; }}
     .hero-title {{ font-size: 32px; }}
     .input-box {{ height: 64px; }}
-    .input-wrap {{ width: 92%; }}
+    .input-wrap {{ width: 88%; }}
     .input-box {{ padding: 0 14px 0 24px; }}
     .input-box input {{ font-size: 20px; }}
   }}
@@ -160,7 +179,10 @@ html = f"""
     <div class="content">
       <div class="hero">
         <img class="hero-avatar" src="data:image/png;base64,{avatar_b64}" alt="avatar" />
-        <h1 class="hero-title">我是鑫哥，帮你搞搞数据</h1>
+        <h1 class="hero-title" id="hero-title" data-fulltext="我是鑫哥，帮你搞搞数据">
+          <span class="hero-reserve">我是鑫哥，帮你搞搞数据</span>
+          <span id="hero-text" class="hero-live"></span>
+        </h1>
       </div>
 
       <div class="input-wrap">
@@ -173,8 +195,23 @@ html = f"""
   </div>
 
   <script>
+    const heroTitleEl = document.getElementById("hero-title");
+    const heroTextEl = document.getElementById("hero-text");
     const inputEl = document.getElementById("chat-input");
     const sendBtn = document.getElementById("send-btn");
+
+    const fullTitle = (heroTitleEl && heroTitleEl.dataset.fulltext) || "";
+    let titleIndex = 0;
+
+    function streamTitle() {{
+      if (!heroTextEl) return;
+      if (titleIndex <= fullTitle.length) {{
+        heroTextEl.textContent = fullTitle.slice(0, titleIndex);
+        titleIndex += 1;
+        const nextDelay = 30 + Math.floor(Math.random() * 55);
+        setTimeout(streamTitle, nextDelay);
+      }}
+    }}
 
     function handleSubmit() {{
       const text = inputEl.value.trim();
@@ -193,6 +230,7 @@ html = f"""
       }}
     }});
 
+    streamTitle();
     inputEl.focus();
   </script>
 </body>
