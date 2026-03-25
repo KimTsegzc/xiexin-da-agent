@@ -30,7 +30,6 @@ Let's make this a chatbot-like UI.
 
 ## Interactive Components
 - [comp-chat-box]an input box for type and send.
-- [comp-file-selection]a file selection, list all active excel file.
 
 
 <!-- BACKEND -->
