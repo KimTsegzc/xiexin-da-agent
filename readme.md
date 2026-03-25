@@ -6,7 +6,7 @@
 # project statement
 ## This is an AI native or say AI ready project.
 ## Readme is a charter of this project.
-## some detailed defines the way of building loads in Architect.md.
+## some detailed defines the way of building loads in ./architect.md.
 
 <!-- INFO -->
 # project info
