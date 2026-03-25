@@ -1,0 +1,6 @@
+{
+  "api_key": "sk-21e4448b65a34894a10bed4bac3fd09d",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "system_prompt": "You are a helpful assistant.",
+  "temperature": 0.7
+}
