@@ -103,6 +103,7 @@ Use when:
     "request_options": {
       "temperature": 0.7
     },
+    "first_token_latency_seconds": 0.42,
     "latency_seconds": 1.23,
     "throughput_tokens_per_second": 45.67,
     "prompt_tokens": 120,
@@ -118,6 +119,7 @@ Use when:
   "content": "完整回复文本",
   "metrics": {
     "model": "qwen3.5-flash",
+    "first_token_latency_seconds": 0.42,
     "latency_seconds": 1.23,
     "throughput_tokens_per_second": 45.67,
     "prompt_tokens": 120,

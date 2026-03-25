@@ -122,6 +122,7 @@ def LLM_stream(
     pending_parts = []
     last_emit = started
     first_token_emitted = False
+    first_token_latency_seconds = None
     usage_metrics = {
         "prompt_tokens": None,
         "completion_tokens": None,
@@ -141,10 +142,11 @@ def LLM_stream(
         if piece:
             if not first_token_emitted:
                 first_token_emitted = True
+                first_token_latency_seconds = time.perf_counter() - started
                 yield {
                     "type": "pulse",
                     "stage": "first_token",
-                    "elapsed_seconds": time.perf_counter() - started,
+                    "elapsed_seconds": first_token_latency_seconds,
                 }
 
             all_parts.append(piece)
@@ -174,6 +176,7 @@ def LLM_stream(
         "model": model_name,
         "base_url": config.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         "request_options": request_options,
+        "first_token_latency_seconds": first_token_latency_seconds,
         "latency_seconds": elapsed,
         "throughput_tokens_per_second": (
             (throughput_tokens / elapsed) if throughput_tokens and elapsed > 0 else None
@@ -206,8 +209,13 @@ def LLM(user_input: str, model: Optional[str] = None) -> str:
 def _format_verbose_metrics(metrics: dict) -> str:
     throughput = metrics.get("throughput_tokens_per_second")
     throughput_text = f"{throughput:.2f} tokens/s" if throughput is not None else "N/A"
+    first_token_latency = metrics.get("first_token_latency_seconds")
+    first_token_latency_text = (
+        f"{first_token_latency:.3f}s" if first_token_latency is not None else "N/A"
+    )
     return (
         f"[VERBOSE] model={metrics.get('model')}\n"
+        f"[VERBOSE] first_token_latency={first_token_latency_text}\n"
         f"[VERBOSE] latency={metrics.get('latency_seconds', 0.0):.3f}s\n"
         f"[VERBOSE] usage prompt={metrics.get('prompt_tokens')} completion={metrics.get('completion_tokens')} total={metrics.get('total_tokens')}\n"
         f"[VERBOSE] throughput={throughput_text}"
