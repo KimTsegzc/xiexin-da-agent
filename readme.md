@@ -1,4 +1,4 @@
-**This is a human write file(./readme.md) to make things controllable.**
+**This is a human write file() to make things controllable.**
 **AI agents should read to understand.**
 **No AI should/could/would make any change.**
 

@@ -65,6 +65,12 @@ html = f"""
     width: fit-content;
     max-width: 92%;
     margin: 0 auto;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }}
+
+  .hero.ready {{
+    opacity: 1;
   }}
 
   .hero-avatar {{
@@ -230,7 +236,19 @@ html = f"""
       }}
     }});
 
-    streamTitle();
+    function startHeroAnimation() {{
+      if (heroTitleEl && heroTitleEl.parentElement) {{
+        heroTitleEl.parentElement.classList.add("ready");
+      }}
+      streamTitle();
+    }}
+
+    if (document.fonts && document.fonts.ready) {{
+      document.fonts.ready.then(() => requestAnimationFrame(startHeroAnimation));
+    }} else {{
+      requestAnimationFrame(startHeroAnimation);
+    }}
+
     inputEl.focus();
   </script>
 </body>
