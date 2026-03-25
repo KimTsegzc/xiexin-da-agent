@@ -1,5 +1,5 @@
 {
-  "config_to": "./Gateway/Back/LLM-provider.py",
+  "config_to": "./Gateway/Back/llm_provider.py",
   "config_desc": "Configuration for LLM provider runtime: API auth, endpoint, system prompt, and generation defaults.",
   "llm_provider_config": {
     "api_key": "sk-21e4448b65a34894a10bed4bac3fd09d",

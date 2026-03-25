@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+{{ styles }}
+</style>
+</head>
+<body>
+  <script>
+    window.APP_CONFIG = {
+      streamApiUrl: "{{ stream_api_url }}"
+    };
+  </script>
+  <div class="page">
+    <div class="content">
+      <div class="hero">
+        <img class="hero-avatar" src="data:image/png;base64,{{ avatar_b64 }}" alt="avatar" />
+        <h1 class="hero-title" id="hero-title" data-fulltext="我是鑫哥，帮你搞搞数据">
+          <span class="hero-reserve">我是鑫哥，帮你搞搞数据</span>
+          <span id="hero-text" class="hero-live"></span>
+        </h1>
+      </div>
+
+      <div class="input-wrap">
+        <div class="input-box">
+          <input id="chat-input" type="text" placeholder="Ask anything" autocomplete="off" />
+          <button id="send-btn" class="send-btn">➤</button>
+        </div>
+      </div>
+
+      <div class="chat-shell" id="chat-shell"></div>
+    </div>
+  </div>
+
+  <script>
+{{ script }}
+  </script>
+</body>
+</html>
