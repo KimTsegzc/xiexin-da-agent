@@ -31,7 +31,7 @@ function Find-Python {
     return $null
 }
 
-if (Test-Path $LauncherExe) {
+if ((-not $PythonOverride) -and (Test-Path $LauncherExe)) {
     & $LauncherExe --stop --port $Port
     return
 }

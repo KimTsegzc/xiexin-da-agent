@@ -1,6 +1,10 @@
 pp/
 .venv/
 .venv311/
+.env
+.env.*
+!.env.example
+*.egg-info/
 .streamlit/frontend-*.log
 .streamlit/frontend-*.pid
 __pycache__/

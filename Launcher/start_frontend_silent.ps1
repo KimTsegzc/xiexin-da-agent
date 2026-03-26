@@ -32,7 +32,7 @@ function Find-Python {
     return $null
 }
 
-if (Test-Path $LauncherExe) {
+if ((-not $PythonOverride) -and (Test-Path $LauncherExe)) {
     $launcherArgs = @('--port', $Port)
     if ($NoBrowser) {
         $launcherArgs += '--no-browser'

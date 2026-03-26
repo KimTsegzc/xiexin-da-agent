@@ -1,75 +1,39 @@
-import json
-import os
+from __future__ import annotations
+
 import threading
 import time
-from pathlib import Path
 from typing import Iterator, Optional
 
 from openai import OpenAI
 
-# Keep model choice centralized in code for eahisier controlled switching.
-ACTIVE_MODEL = "qwen3.5-flash"
+from .settings import Settings, get_settings
+
 VERBOSE_MODE_DEFAULT = True
 STREAM_MODE_DEFAULT = True
 STREAM_SMOOTH_MIN_CHARS = 12
 STREAM_SMOOTH_MAX_WAIT_SECONDS = 0.05
 
 
-def load_config() -> dict:
-    """Load config from ./config.json (cwd first, then script directory)."""
-    repo_root = Path(__file__).resolve().parents[2]
-    candidate_paths = [
-        repo_root / "config.json",
-        Path(__file__).resolve().parent / "config.json",
-        Path.cwd() / "config.json",
-    ]
-
-    config_path = next((p for p in candidate_paths if p.exists()), None)
-    if not config_path:
-        searched = "\n".join(str(p) for p in candidate_paths)
-        raise FileNotFoundError(
-            "config.json not found. Please create it in one of these locations:\n"
-            f"{searched}"
-        )
-
-    try:
-        with open(config_path, "r", encoding="utf-8") as fp:
-            config = json.load(fp)
-            if not isinstance(config, dict):
-                raise ValueError("config.json root must be a JSON object")
-            wrapped_runtime = config.get("llm_provider_config")
-            if isinstance(wrapped_runtime, dict):
-                return wrapped_runtime
-            return config
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid JSON in config file: {config_path} ({exc})") from exc
-
-
-def build_client(config: dict) -> OpenAI:
-    api_key = (
-        config.get("api_key")
-        or os.getenv("DASHSCOPE_API_KEY")
-        or os.getenv("ALIYUN_BAILIAN_API_KEY")
-    )
-    if not api_key:
+def build_client(settings: Settings) -> OpenAI:
+    if not settings.api_key:
         raise RuntimeError(
-            "Missing api_key. Fill it in config.json or set DASHSCOPE_API_KEY/ALIYUN_BAILIAN_API_KEY."
+            "Missing API key. Set DASHSCOPE_API_KEY or ALIYUN_BAILIAN_API_KEY in the environment or .env."
         )
 
-    base_url = config.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    return OpenAI(api_key=api_key, base_url=base_url)
+    return OpenAI(api_key=settings.api_key, base_url=settings.base_url)
 
 
-def _resolve_model(model: Optional[str] = None) -> str:
-    return model or ACTIVE_MODEL
+def _resolve_model(settings: Settings, model: Optional[str] = None) -> str:
+    return model or settings.model
 
 
-def _resolve_request_options(config: dict) -> dict:
-    """Pick optional generation parameters from config when provided."""
+def _resolve_request_options(settings: Settings) -> dict:
+    """Pick optional generation parameters from settings when provided."""
     options = {}
     for key in ("temperature", "top_p", "max_tokens"):
-        if key in config and config[key] is not None:
-            options[key] = config[key]
+        value = getattr(settings, key)
+        if value is not None:
+            options[key] = value
     return options
 
 
@@ -82,9 +46,9 @@ def _extract_usage_metrics(completion) -> dict:
     }
 
 
-def _build_messages(config: dict, user_input: str) -> list[dict]:
+def _build_messages(settings: Settings, user_input: str) -> list[dict]:
     return [
-        {"role": "system", "content": config.get("system_prompt", "You are a helpful assistant.")},
+        {"role": "system", "content": settings.system_prompt},
         {"role": "user", "content": user_input},
     ]
 
@@ -101,10 +65,10 @@ def LLM_stream(
     - {"type": "delta", "content": "..."}
     - {"type": "done", "content": "full text", "metrics": {...}}
     """
-    config = load_config()
-    client = build_client(config)
-    model_name = _resolve_model(model=model)
-    request_options = _resolve_request_options(config)
+    settings = get_settings()
+    client = build_client(settings)
+    model_name = _resolve_model(settings, model=model)
+    request_options = _resolve_request_options(settings)
 
     started = time.perf_counter()
     yield {"type": "pulse", "stage": "accepted", "elapsed_seconds": 0.0}
@@ -112,7 +76,7 @@ def LLM_stream(
     stream = client.chat.completions.create(
         # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
         model=model_name,
-        messages=_build_messages(config, user_input),
+        messages=_build_messages(settings, user_input),
         stream=True,
         stream_options={"include_usage": True},
         **request_options,
@@ -174,7 +138,7 @@ def LLM_stream(
     throughput_tokens = usage_metrics["completion_tokens"] or usage_metrics["total_tokens"]
     metrics = {
         "model": model_name,
-        "base_url": config.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        "base_url": settings.base_url,
         "request_options": request_options,
         "first_token_latency_seconds": first_token_latency_seconds,
         "latency_seconds": elapsed,

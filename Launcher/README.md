@@ -11,11 +11,14 @@
 
 - `start_frontend_silent.ps1`
   - 启动包装脚本。
-  - 优先调用根目录下的 `Go_XIEXin.exe`。
-  - 如果 exe 不存在，就回退到 Python 执行 `Go_XIEXin.py`。
+  - 默认优先调用根目录下的 `Go_XIEXin.exe`。
+  - 如果显式传入 `-PythonOverride`，则强制改走 Python 执行 `Go_XIEXin.py`。
+  - 如果 exe 不存在，也会回退到 Python 执行 `Go_XIEXin.py`。
 
 - `stop_frontend.ps1`
   - 停止包装脚本。
+  - 默认优先调用 exe 的 `--stop`。
+  - 如果显式传入 `-PythonOverride`，则强制改走 Python 版启动器的 `--stop`。
   - 调用 exe 或 Python 版启动器的 `--stop` 模式，关闭当前前端进程。
 
 - `build_go_xiexin.ps1`
@@ -32,6 +35,14 @@
 日常启动链路：
 
 `start_frontend_silent.ps1` -> `Go_XIEXin.exe` 或 `Go_XIEXin.py` -> `Gateway/Front/app.py`
+
+优先级规则：
+
+`传入 -PythonOverride` -> 强制走 `Go_XIEXin.py`
+
+`未传入 -PythonOverride` 且 `Go_XIEXin.exe` 存在 -> 优先走 `Go_XIEXin.exe`
+
+`未传入 -PythonOverride` 且 exe 不存在 -> 回退到 `Go_XIEXin.py`
 
 日常停止链路：
 
