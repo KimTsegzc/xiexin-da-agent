@@ -112,16 +112,29 @@ function InteractiveAvatar({ className, alt, ariaLabel }) {
       window.clearTimeout(resetTimerRef.current);
       resetTimerRef.current = null;
     }
-    videoRef.current.currentTime = 0;
-    videoRef.current.muted = false;
-    videoRef.current.volume = 1;
-    const playback = videoRef.current.play();
-    if (playback && typeof playback.catch === "function") {
-      playback.catch(() => {
-        setPlaying(false);
-        setVideoVisible(false);
-      });
+
+    async function startPlayback() {
+      if (!videoRef.current) return;
+      videoRef.current.currentTime = 0;
+      videoRef.current.muted = false;
+      videoRef.current.volume = 1;
+      try {
+        await videoRef.current.play();
+      } catch {
+        // Some mobile browsers block unmuted first-play; fallback keeps interaction visible.
+        try {
+          if (!videoRef.current) return;
+          videoRef.current.currentTime = 0;
+          videoRef.current.muted = true;
+          await videoRef.current.play();
+        } catch {
+          setPlaying(false);
+          setVideoVisible(false);
+        }
+      }
     }
+
+    void startPlayback();
   }, [playing]);
 
   function handleClick() {
@@ -168,6 +181,7 @@ function InteractiveAvatar({ className, alt, ariaLabel }) {
         src={AVATAR_INTERACTION_VIDEO_PATH}
         preload="auto"
         playsInline
+        webkit-playsinline="true"
         onLoadedData={() => {
           if (playing) {
             setVideoVisible(true);
@@ -203,6 +217,7 @@ export default function App() {
   const wechatWelcomeLockRef = useRef(null);
   const apiBase = resolveApiBase();
   const mobileLikeWechat = clientMode === "wechat" || (clientMode === "default" && isMobileViewport);
+  const appLockActive = mobileLikeWechat;
   const welcomeLockActive = mobileLikeWechat && !chatMode;
   const allowWelcomeAutoFocus = !mobileLikeWechat;
 
@@ -227,6 +242,7 @@ export default function App() {
 
   useEffect(() => {
     const root = document.documentElement;
+    const shouldTrackViewportScroll = !welcomeLockActive;
 
     function syncViewportMetrics() {
       const viewport = window.visualViewport;
@@ -246,12 +262,16 @@ export default function App() {
       root.style.setProperty("--keyboard-offset", `${keyboardOffset}px`);
 
       if (welcomeLockActive) {
-        const lockThreshold = Math.max(96, Math.round(nextStableHeight * 0.16));
+        const isDefaultMobileMode = clientMode === "default" && isMobileViewport;
+        const lockThresholdRatio = isDefaultMobileMode ? 0.13 : 0.16;
+        const lockFollowRatio = isDefaultMobileMode ? 0.09 : 0.12;
+        const fallbackLockRatio = isDefaultMobileMode ? 0.37 : 0.41;
+        const lockThreshold = Math.max(96, Math.round(nextStableHeight * lockThresholdRatio));
         if (keyboardOffset > lockThreshold && wechatWelcomeLockRef.current == null) {
-          wechatWelcomeLockRef.current = keyboardOffset + Math.round(nextStableHeight * 0.12);
+          wechatWelcomeLockRef.current = keyboardOffset + Math.round(nextStableHeight * lockFollowRatio);
         }
 
-        const fallbackLock = Math.round(nextStableHeight * 0.41);
+        const fallbackLock = Math.round(nextStableHeight * fallbackLockRatio);
         root.style.setProperty(
           "--wechat-welcome-lock-bottom",
           `${wechatWelcomeLockRef.current ?? fallbackLock}px`,
@@ -264,14 +284,18 @@ export default function App() {
     syncViewportMetrics();
     window.addEventListener("resize", syncViewportMetrics);
     window.visualViewport?.addEventListener("resize", syncViewportMetrics);
-    window.visualViewport?.addEventListener("scroll", syncViewportMetrics);
+    if (shouldTrackViewportScroll) {
+      window.visualViewport?.addEventListener("scroll", syncViewportMetrics);
+    }
 
     return () => {
       window.removeEventListener("resize", syncViewportMetrics);
       window.visualViewport?.removeEventListener("resize", syncViewportMetrics);
-      window.visualViewport?.removeEventListener("scroll", syncViewportMetrics);
+      if (shouldTrackViewportScroll) {
+        window.visualViewport?.removeEventListener("scroll", syncViewportMetrics);
+      }
     };
-  }, [chatMode, welcomeLockActive]);
+  }, [chatMode, clientMode, isMobileViewport, welcomeLockActive]);
 
   useEffect(() => {
     document.documentElement.dataset.clientMode = clientMode;
@@ -282,6 +306,16 @@ export default function App() {
       delete document.body.dataset.clientMode;
     };
   }, [clientMode]);
+
+  useEffect(() => {
+    document.documentElement.dataset.appLock = appLockActive ? "true" : "false";
+    document.body.dataset.appLock = appLockActive ? "true" : "false";
+
+    return () => {
+      delete document.documentElement.dataset.appLock;
+      delete document.body.dataset.appLock;
+    };
+  }, [appLockActive]);
 
   useEffect(() => {
     document.documentElement.dataset.welcomeLock = welcomeLockActive ? "true" : "false";
@@ -344,12 +378,21 @@ export default function App() {
   }, [input]);
 
   useEffect(() => {
-    if (!welcomeLockActive) return undefined;
+    if (!appLockActive) return undefined;
 
     function lockWindowScroll() {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
         window.scrollTo(0, 0);
       }
+    }
+
+    function handleFocusIn(event) {
+      const target = event.target;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag !== "textarea" && tag !== "input") return;
+      lockWindowScroll();
+      window.setTimeout(lockWindowScroll, 60);
+      window.setTimeout(lockWindowScroll, 180);
     }
 
     function handleViewportShift() {
@@ -359,12 +402,14 @@ export default function App() {
     lockWindowScroll();
     window.addEventListener("scroll", lockWindowScroll, { passive: true });
     window.visualViewport?.addEventListener("scroll", handleViewportShift);
+    document.addEventListener("focusin", handleFocusIn, true);
 
     return () => {
       window.removeEventListener("scroll", lockWindowScroll);
       window.visualViewport?.removeEventListener("scroll", handleViewportShift);
+      document.removeEventListener("focusin", handleFocusIn, true);
     };
-  }, [welcomeLockActive]);
+  }, [appLockActive]);
 
   useEffect(() => {
     if (!settingsOpen) return undefined;

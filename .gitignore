@@ -10,3 +10,16 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Frontend dependency/build artifacts
+**/node_modules/
+**/dist/
+
+# Local build outputs and runtime logs
+.build/
+.streamlit/
+*.log
+*.pid
+
+# Editor state
+.vscode/
