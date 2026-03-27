@@ -4,6 +4,8 @@ const HERO_TEXT = "我是鑫哥，帮你搞搞数据";
 const API_PORT = 8765;
 const STREAM_PATH = "/api/chat/stream";
 const CONFIG_PATH = "/api/frontend-config";
+const AVATAR_IMAGE_PATH = "/xiexin-avatar.png";
+const AVATAR_INTERACTION_VIDEO_PATH = "/smile%20face.mp4";
 
 function readForcedClientMode() {
   const params = new URLSearchParams(window.location.search);
@@ -92,8 +94,95 @@ function MessageBubble({ message }) {
   );
 }
 
+function InteractiveAvatar({ className, alt, ariaLabel }) {
+  const [playing, setPlaying] = useState(false);
+  const [videoVisible, setVideoVisible] = useState(false);
+  const videoRef = useRef(null);
+  const resetTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!playing || !videoRef.current) return;
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+    videoRef.current.currentTime = 0;
+    videoRef.current.muted = false;
+    videoRef.current.volume = 1;
+    const playback = videoRef.current.play();
+    if (playback && typeof playback.catch === "function") {
+      playback.catch(() => {
+        setPlaying(false);
+        setVideoVisible(false);
+      });
+    }
+  }, [playing]);
+
+  function handleClick() {
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+    if (playing && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.muted = false;
+      void videoRef.current.play();
+      return;
+    }
+    setPlaying(true);
+  }
+
+  function handleVideoEnded() {
+    setVideoVisible(false);
+    resetTimerRef.current = window.setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+      setPlaying(false);
+      resetTimerRef.current = null;
+    }, 160);
+  }
+
+  return (
+    <button
+      type="button"
+      className={`avatar-hitbox ${className}`}
+      onClick={handleClick}
+      aria-label={ariaLabel || alt || "头像互动"}
+    >
+      <img
+        className="avatar-media avatar-image"
+        src={AVATAR_IMAGE_PATH}
+        alt={alt}
+      />
+      <video
+        ref={videoRef}
+        className={`avatar-media avatar-video ${videoVisible ? "is-visible" : ""}`}
+        src={AVATAR_INTERACTION_VIDEO_PATH}
+        preload="auto"
+        playsInline
+        onLoadedData={() => {
+          if (playing) {
+            setVideoVisible(true);
+          }
+        }}
+        onPlaying={() => setVideoVisible(true)}
+        onEnded={handleVideoEnded}
+      />
+    </button>
+  );
+}
+
 export default function App() {
   const [clientMode] = useState(() => resolveClientMode());
+  const [isMobileViewport, setIsMobileViewport] = useState(() => window.innerWidth <= 900);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -113,6 +202,9 @@ export default function App() {
   const stableViewportWidthRef = useRef(0);
   const wechatWelcomeLockRef = useRef(null);
   const apiBase = resolveApiBase();
+  const mobileLikeWechat = clientMode === "wechat" || (clientMode === "default" && isMobileViewport);
+  const welcomeLockActive = mobileLikeWechat && !chatMode;
+  const allowWelcomeAutoFocus = !mobileLikeWechat;
 
   function getPreferredSettingsAnchor() {
     return chatMode && window.innerWidth > 900 ? "rail" : "header";
@@ -122,6 +214,16 @@ export default function App() {
     setSettingsAnchor(anchor);
     setSettingsOpen((current) => (settingsAnchor === anchor ? !current : true));
   }
+
+  useEffect(() => {
+    function syncMobileViewportFlag() {
+      setIsMobileViewport(window.innerWidth <= 900);
+    }
+
+    syncMobileViewportFlag();
+    window.addEventListener("resize", syncMobileViewportFlag);
+    return () => window.removeEventListener("resize", syncMobileViewportFlag);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -143,7 +245,7 @@ export default function App() {
       root.style.setProperty("--app-width-stable", `${nextStableWidth}px`);
       root.style.setProperty("--keyboard-offset", `${keyboardOffset}px`);
 
-      if (clientMode === "wechat" && !chatMode) {
+      if (welcomeLockActive) {
         const lockThreshold = Math.max(96, Math.round(nextStableHeight * 0.16));
         if (keyboardOffset > lockThreshold && wechatWelcomeLockRef.current == null) {
           wechatWelcomeLockRef.current = keyboardOffset + Math.round(nextStableHeight * 0.12);
@@ -154,6 +256,8 @@ export default function App() {
           "--wechat-welcome-lock-bottom",
           `${wechatWelcomeLockRef.current ?? fallbackLock}px`,
         );
+      } else {
+        wechatWelcomeLockRef.current = null;
       }
     }
 
@@ -167,7 +271,7 @@ export default function App() {
       window.visualViewport?.removeEventListener("resize", syncViewportMetrics);
       window.visualViewport?.removeEventListener("scroll", syncViewportMetrics);
     };
-  }, [chatMode, clientMode]);
+  }, [chatMode, welcomeLockActive]);
 
   useEffect(() => {
     document.documentElement.dataset.clientMode = clientMode;
@@ -180,8 +284,6 @@ export default function App() {
   }, [clientMode]);
 
   useEffect(() => {
-    const welcomeLockActive = clientMode === "wechat" && !chatMode;
-
     document.documentElement.dataset.welcomeLock = welcomeLockActive ? "true" : "false";
     document.body.dataset.welcomeLock = welcomeLockActive ? "true" : "false";
 
@@ -189,7 +291,7 @@ export default function App() {
       delete document.documentElement.dataset.welcomeLock;
       delete document.body.dataset.welcomeLock;
     };
-  }, [chatMode, clientMode]);
+  }, [welcomeLockActive]);
 
   useEffect(() => {
     let active = true;
@@ -242,7 +344,7 @@ export default function App() {
   }, [input]);
 
   useEffect(() => {
-    if (!(clientMode === "wechat" && !chatMode)) return undefined;
+    if (!welcomeLockActive) return undefined;
 
     function lockWindowScroll() {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
@@ -262,7 +364,7 @@ export default function App() {
       window.removeEventListener("scroll", lockWindowScroll);
       window.visualViewport?.removeEventListener("scroll", handleViewportShift);
     };
-  }, [chatMode, clientMode]);
+  }, [welcomeLockActive]);
 
   useEffect(() => {
     if (!settingsOpen) return undefined;
@@ -356,7 +458,7 @@ export default function App() {
         </button>
         {popoverOpen ? (
           <div className="settings-popover">
-            <div className="settings-title">选择模型</div>
+            <div className="settings-title">MODEL</div>
             <div className="settings-list">
               {models.map((model, index) => (
                 <button
@@ -482,16 +584,16 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell is-${clientMode} ${chatMode ? "chat-mode" : "welcome-mode"}`}>
+    <div className={`app-shell is-${clientMode} ${clientMode === "default" && isMobileViewport ? "is-mobile-default" : ""} ${chatMode ? "chat-mode" : "welcome-mode"}`}>
       <header className="topbar">
-        {chatMode ? <img className="topbar-avatar" src="/xiexin-avatar.png" alt="鑫哥头像" /> : null}
+        {chatMode ? <InteractiveAvatar className="topbar-avatar" alt="鑫哥头像" /> : null}
         {renderSettingsControl("header")}
       </header>
 
       {!chatMode ? (
         <div className="welcome-stack-shell">
           <section className="hero-panel">
-            <img className="hero-avatar" src="/xiexin-avatar.png" alt="鑫哥头像" />
+            <InteractiveAvatar className="hero-avatar" alt="鑫哥头像" />
             <div className="hero-copy">
               <h1 className="hero-title">{statusText}</h1>
             </div>
@@ -500,7 +602,7 @@ export default function App() {
           <form className="composer-shell" onSubmit={handleSubmit}>
             <div className={`composer-box ${input.trim() ? "has-text" : "is-empty"}`}>
               <div className="composer-leading">
-                <div className="composer-model">{selectedModel || "model"}</div>
+                <div className="composer-model">{selectedModel || "MODEL"}</div>
               </div>
               <textarea
                 ref={textareaRef}
@@ -510,7 +612,7 @@ export default function App() {
                 onKeyDown={handleComposerKeyDown}
                 placeholder="Ask anything"
                 disabled={!configReady || loading}
-                autoFocus={!chatMode}
+                autoFocus={!chatMode && allowWelcomeAutoFocus}
               />
               <button type="submit" className="send-button" disabled={!configReady || loading}>
                 {loading ? "..." : "➤"}
@@ -524,7 +626,7 @@ export default function App() {
         {chatMode ? (
           <aside className="chat-rail" aria-hidden="true">
             <div className="chat-rail-inner">
-              <img className="chat-rail-avatar" src="/xiexin-avatar.png" alt="" />
+              <InteractiveAvatar className="chat-rail-avatar" alt="" ariaLabel="侧边头像互动" />
               <div className="chat-rail-settings">{renderSettingsControl("rail")}</div>
             </div>
           </aside>
@@ -538,7 +640,7 @@ export default function App() {
         <form className="composer-shell" onSubmit={handleSubmit}>
           <div className={`composer-box ${input.trim() ? "has-text" : "is-empty"}`}>
             <div className="composer-leading">
-              <div className="composer-model">{selectedModel || "model"}</div>
+              <div className="composer-model">{selectedModel || "MODEL"}</div>
             </div>
             <textarea
               ref={textareaRef}
@@ -548,7 +650,7 @@ export default function App() {
               onKeyDown={handleComposerKeyDown}
               placeholder="Ask anything"
               disabled={!configReady || loading}
-              autoFocus={!chatMode}
+              autoFocus={!chatMode && allowWelcomeAutoFocus}
             />
             <button type="submit" className="send-button" disabled={!configReady || loading}>
               {loading ? "..." : "➤"}
