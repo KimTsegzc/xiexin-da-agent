@@ -5,7 +5,6 @@ import time
 from typing import Iterator, Optional
 
 from openai import OpenAI
-
 from .settings import AVAILABLE_MODELS, Settings, get_settings, load_system_prompt
 
 

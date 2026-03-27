@@ -10,30 +10,25 @@
 
 ```text
 Gateway/Front/
-├─ react-ui/                          # React + Vite 主前端
-│  ├─ src/
-│  │  ├─ App.jsx                      # 高层调度器：按 desktop/mobile-default/wechat 分发壳层
-│  │  ├─ styles.css                   # 当前全量样式入口（后续继续拆层）
-│  │  ├─ main.jsx                     # React 入口
-│  │  └─ app/
-│  │     ├─ constants.js              # 共享常量
-│  │     ├─ utils/                    # clientMode / api / markdown 等基础能力
-│  │     ├─ hooks/                    # viewport、键盘、配置、流式会话、热键等运行时 hooks
-│  │     ├─ components/               # Composer / MessageBubble / Settings / Avatar / Welcome / ChatStage
-│  │     └─ shells/                   # DesktopShell / MobileShell / WechatShell
-│  ├─ public/                         # 静态资源（头像、交互视频等）
-│  ├─ wechat/index.html               # 微信入口（注入 __APP_CLIENT_MODE=wechat）
-│  ├─ index.html                      # 默认入口
-│  └─ vite.config.js                  # 双入口构建（main + wechat）
+├─ frontend-core/                     # Web / Taro 共享协议、常量与消息结构
+├─ taro-mobile/                       # 当前主前端（Taro + React）
+│  ├─ src/pages/chat/index.jsx        # 当前主链路：欢迎态 / 会话页 / 输入区
+│  └─ config/index.js                 # Taro 构建配置
 └─ reference/                         # 设计/参考素材
 ```
 
 ## 2. 运行架构（Front 在系统中的位置）
 
+前端现在收敛成一条主线：
+
+1. `taro-mobile` 作为当前唯一前端入口
+2. `frontend-core` 承担共享协议层，保留协议、常量、消息结构等可复用能力
+3. H5 只用于开发热更和浏览器调试，真正要验证软键盘容器能力时应优先跑容器目标
+
 前端并不是单独项目，它和后端 `orchestrator.py` 配套运行：
 
 1. 启动器 `Launcher/Go_XIEXin.py` 启动后端服务（默认 `8765`）
-2. 同时启动 `Gateway/Front/react-ui`（Vite，默认 `8501`）
+2. 同时启动 `Gateway/Front/taro-mobile`（Taro H5，默认 `8501`）
 3. 前端通过 HTTP 调后端接口：
 - `GET /api/frontend-config`：获取模型列表与默认模型
 - `POST /api/chat/stream`：NDJSON 流式输出
@@ -42,7 +37,56 @@ Gateway/Front/
 关键实现位置：
 - 后端接口定义：`orchestrator.py`
 - 模型列表/默认模型来源：`Gateway/Back/settings.py` + `Gateway/Back/llm_provider.py`
-- 前端接口调用：`Gateway/Front/react-ui/src/App.jsx`
+- 当前前端接口调用：`Gateway/Front/taro-mobile/src/pages/chat/index.jsx`
+- 共享协议层：`Gateway/Front/frontend-core/*.js`
+- Taro 移动端入口：`Gateway/Front/taro-mobile/src/pages/chat/index.jsx`
+
+## 2.1 当前迁移策略
+
+当前策略已经调整为主线收敛：
+
+1. 旧 Web 前端已退出主启动链，不再作为默认前端
+2. `taro-mobile` 接管当前开发与后续容器化演进
+3. Taro H5 只承担开发热更与浏览器调试，不把它等同于“系统容器层”
+4. 真正验证软键盘容器能力时，应优先跑 `weapp` 或后续原生容器目标
+5. 当前 Taro 首版仍使用 `/api/chat` 非流式接口保证稳定，后续再按端能力补流式
+
+## 2.2 Taro 移动端运行方式
+
+移动端容器端目录：`Gateway/Front/taro-mobile`
+
+首次安装依赖：
+
+```powershell
+cd Gateway/Front/taro-mobile
+npm install
+```
+
+开发命令：
+
+```powershell
+npm run dev:h5
+npm run dev:weapp
+```
+
+一句话判断：
+
+- `dev:h5` = 开发热更，用来快速调 UI 和接口
+- `build:*` = 产物打包，不用来日常调试
+- 如果你观察的是“手机浏览器仍然顶飞”，那是浏览器路径问题，不是系统容器能力已经生效
+
+如需显式指定后端地址，可在启动前设置环境变量：
+
+```powershell
+$env:TARO_APP_API_BASE = "http://127.0.0.1:8765"
+```
+
+当前 Taro 首版特性：
+
+1. 欢迎态 / 聊天态 / 输入区主链路已迁入容器端
+2. 会话结构、配置协议、消息对象复用 `frontend-core`
+3. 输入区底部位移由 `Taro.onKeyboardHeightChange` 驱动
+4. assistant 回复已支持基础 markdown 富文本渲染
 
 ## 3. 页面基础布局
 
@@ -63,121 +107,29 @@ Gateway/Front/
 - 所有 avatar 都接入点击播放视频
 - 使用“底图常驻 + 视频叠层淡入淡出 + 延迟 reset”避免首尾闪白
 
-## 4. 几个端的逻辑（模式分流）
+## 4. 容器问题判断
 
-前端模式判定仍由 `App.jsx` 统一完成，但渲染已经下沉到不同壳层：
+当前要明确区分两件事：
 
-1. 微信强制入口
-- `react-ui/wechat/index.html` 注入：`window.__APP_CLIENT_MODE = "wechat"`
+1. `Taro H5` 仍然是浏览器目标，只适合开发热更和浏览器调试
+2. `Taro weapp` 或后续原生容器目标，才是“系统容器层”真正生效的路径
 
-2. URL 强制
-- `?client=wechat` 或 `?mode=wechat`
+所以如果你现在在手机浏览器里看到“输入法顶飞”，这只能说明浏览器路径的问题还在，不代表容器方案无效。
 
-3. UA 自动识别
-- `micromessenger` 或 `window.__wxjs_environment === "miniprogram"`
+## 5. 当前输入法策略
 
-4. 默认模式（default）下的移动端对齐
-- 运行时根据 `window.innerWidth <= 900` 识别移动端
-- 默认移动端会追加 `is-mobile-default`，并复用微信端移动布局与字号 token
+当前 Taro 主链路里，输入区底部位移由 `Taro.onKeyboardHeightChange` 驱动，核心代码在 `taro-mobile/src/pages/chat/index.jsx`：
 
-结果：
-- 桌面 default：桌面布局
-- 微信：`is-wechat` 路径
-- 非微信但移动端：`is-mobile-default`，行为与微信端对齐（含键盘处理策略）
+1. 欢迎态和聊天态已经都归到同一个页面容器
+2. 输入区通过 `keyboardHeight` 做底部补偿
+3. 消息线程和输入区不再依赖旧 Web 的 `visualViewport + scrollTo` 补偿链
 
-当前壳层职责：
-- `DesktopShell`：保留桌面欢迎态 / 聊天态结构，聊天态展示左侧 rail
-- `MobileShell`：移动默认端壳层，不再共享桌面 rail 结构
-- `WechatShell`：微信独立壳层，复用移动端运行时但保留显式入口
-- `ExperienceShell`：共享欢迎态、聊天区、输入区拼装逻辑
+这意味着：
 
-这样做的目的不是立刻改视觉，而是先让移动端和桌面端停止继续在一个大组件里互相牵连。
+1. 浏览器 H5 调试时，只能验证页面结构、接口链路和基础样式
+2. 真正要验证“是否还顶飞”，必须进 `dev:weapp` 或后续原生容器实机
 
-## 5. 输入法弹起问题：控制机制详解
-
-这是当前前端最关键的一块。
-
-### 5.1 问题本质
-
-在移动端 WebView（尤其微信）中，软键盘弹起会改变可视 viewport，常见副作用：
-- 固定元素漂移
-- 页面整体被顶起
-- 滚动位置错乱
-- 输入框/按钮抖动
-
-### 5.2 当前方案（代码级）
-
-#### A. 维护动态 viewport 变量
-
-现在这部分逻辑已经抽到 `src/app/hooks/useViewportMetrics.js` 中统一监听：
-- `window.resize`
-- `visualViewport.resize`
-- `visualViewport.scroll`
-
-并持续写入 CSS 变量：
-- `--app-height`
-- `--app-height-stable`
-- `--app-width`
-- `--app-width-stable`
-- `--keyboard-offset`
-
-其中：
-- `--app-height`：当前可视高度
-- `--app-height-stable`：稳定最大高度（防止来回抖）
-- `--keyboard-offset`：键盘抬升量
-
-#### B. 欢迎态锁定条件
-
-`welcomeLockActive` 条件：
-- 移动端微信路径（`is-wechat`）或移动端默认路径（`is-mobile-default`）
-- 且当前是欢迎态（`!chatMode`）
-
-激活后：
-- 给 `html/body` 打 `data-welcome-lock="true"`
-- CSS 设置 `overflow: hidden; overscroll-behavior: none;`
-
-#### C. 欢迎态固定栈锁底
-
-欢迎态下 `.welcome-stack-shell` 使用绝对定位，`bottom` 由：
-- `--wechat-welcome-lock-bottom`
-
-该值由 JS 根据键盘偏移与稳定高度计算，避免键盘弹起时主视觉和输入框乱跳。
-
-#### D. 强制回滚页面滚动
-
-欢迎态锁定与页面回滚逻辑现在由 `src/app/hooks/useAppScrollLock.js` 负责，通过 `scroll` + `visualViewport.scroll` + `focusin` 维持页面不被拖偏。
-
-#### E. 禁止移动欢迎态自动聚焦
-
-`allowWelcomeAutoFocus` 在移动端路径为 `false`，避免首屏一加载就触发键盘导致布局突变。
-
-### 5.3 修改这块时的硬性注意
-
-1. 不要移除欢迎态的固定容器结构：
-- `.app-shell.is-wechat.welcome-mode`
-- `.app-shell.is-mobile-default.welcome-mode`
-- `.welcome-stack-shell`
-
-2. 不要删除 viewport/keyboard 变量写入逻辑。
-
-3. 不要把移动欢迎态 `autoFocus` 改回 `true`。
-
-4. 修改输入区高度/字号时，优先改 token，不要直接破坏 `--chat-composer-height`、`--composer-bottom`、`--thread-surface-offset` 的关系。
-
-## 6. 样式系统与多端统一策略
-
-`styles.css` 使用三层策略：
-
-1. 全局默认（桌面优先）
-2. `@media (max-width: 900px)` 移动端覆写
-3. 模式 class 细分：
-- `is-wechat`
-- `is-mobile-default`
-- `chat-mode` / `welcome-mode`
-
-目前“移动默认端”和“微信端”已经统一到同一组字号 token（在 `.app-shell.is-wechat, .app-shell.is-mobile-default` 下），后续调字号只改一处。
-
-## 7. 接口与流式渲染说明
+## 6. 接口与渲染说明
 
 前端提交：
 
@@ -196,32 +148,32 @@ POST /api/chat/stream
 - `done`：最终文本和 metrics
 - `error`：错误事件
 
-前端现在在 `src/app/hooks/useChatSession.js` 中按事件实时拼接 assistant 内容，并展示首 token 和总耗时。
+当前首版 Taro 页面先走 `/api/chat` 非流式请求，保证容器链路先稳定。
 
 新增能力：
 - 会话消息会写入 `localStorage`，默认保留最近一段历史，移动端刷新后不会直接丢失上下文
-- 流式会话、配置获取、markdown 渲染都已从页面组件抽成独立模块，后续移动端优化不应再回填到 `App.jsx`
+- 配置获取、消息结构、markdown 渲染都已下沉到 `frontend-core`，后续不要再把逻辑拆回旧 Web 项目
 
-## 8. 本地开发
+## 7. 本地开发
 
-在 `Gateway/Front/react-ui`：
+在 `Gateway/Front/taro-mobile`：
 
 ```bash
 npm install
-npm run dev
+npm run dev:h5
+npm run dev:weapp
 ```
 
-默认端入口：
+H5 开发入口：
 - `http://127.0.0.1:8501/`
 
-微信入口：
-- `http://127.0.0.1:8501/wechat/`
+注意：`dev:h5` 用来热更调试，不用来判断“系统容器层是否已经解决键盘顶飞”。
 
 完整联调推荐通过 Launcher 启动（同时拉起 backend + frontend）：
 - `Launcher/start_frontend_silent.ps1`
 - 或 `Launcher/Go_XIEXin.py`
 
-## 9. 常见排查
+## 8. 常见排查
 
 1. 模型列表空
 - 检查 `GET /api/frontend-config` 是否可达
@@ -232,13 +184,13 @@ npm run dev
 - 看 `.runtime/backend-8765*.log`
 
 3. 移动端键盘导致错位
-- 先确认是否进入 `welcomeLockActive`
-- 检查 `data-welcome-lock` 是否正确挂到 `html/body`
-- 检查 `--keyboard-offset` 与 `--wechat-welcome-lock-bottom` 是否在变化
+- 如果是 H5 浏览器：这是浏览器路径问题，先不要把它误判成“容器层失败”
+- 如果是小程序或容器端：检查 `Taro.onKeyboardHeightChange` 是否有事件回调
+- 看输入区底部 padding 是否跟随 `keyboardHeight` 变化
 
 ---
 
 维护建议：
-- 后续所有“移动端体验”改动，优先在 `is-wechat` 与 `is-mobile-default` 共用层改 token；只有明确需要差异化时，再拆分独立规则。
-- 不要再把 viewport、键盘、流式请求、会话持久化回写到 `App.jsx`，这些应该继续留在 `src/app/hooks` 和 `src/app/utils`。
-- 如果后续引入 Vant4，仅用于移动端标准浮层、toast、loading 这类外壳控件；不要替换自定义 composer、消息线程、头像互动和滚动锁链路。
+- 后续所有移动端改动，优先继续收敛在 `taro-mobile` 和 `frontend-core`
+- 不要再恢复旧 Web 前端作为主入口
+- 浏览器调试和容器验证要分开看，不要混在同一结论里

@@ -14,6 +14,7 @@ __pycache__/
 # Frontend dependency/build artifacts
 **/node_modules/
 **/dist/
+**/.swc/
 
 # Local build outputs and runtime logs
 .build/

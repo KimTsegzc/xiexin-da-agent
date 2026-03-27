@@ -1,12 +1,12 @@
 # Launcher 说明
 
-这个目录负责项目的本地启动、停止和打包，当前前端链路已经升级为 `React + Vite`，后端接口由 `orchestrator.py` 单独提供。
+这个目录负责项目的本地启动、停止和打包，当前前端链路已经切到 `Taro H5`，后端接口由 `orchestrator.py` 单独提供。
 
 ## 文件关系
 
 - `Go_XIEXin.py`
   - 启动核心。
-  - 负责检查 Python 和 npm、清理旧进程、启动 `orchestrator.py --serve`、启动 React Vite 前端、等待前后端就绪、打开浏览器。
+  - 负责检查 Python 和 npm、清理旧进程、启动 `orchestrator.py --serve`、启动 Taro H5 前端、等待前后端就绪、打开浏览器。
   - `Go_XIEXin.exe` 本质上就是它打包后的结果。
 
 - `start_frontend_silent.ps1`
@@ -36,7 +36,7 @@
 
 日常启动链路：
 
-`start_frontend_silent.ps1` -> `Go_XIEXin.py` -> `orchestrator.py --serve` + `Gateway/Front/react-ui`
+`start_frontend_silent.ps1` -> `Go_XIEXin.py` -> `orchestrator.py --serve` + `Gateway/Front/taro-mobile`
 
 兼容参数：
 
@@ -63,4 +63,4 @@
 
 ## 一句话理解
 
-`Go_XIEXin.py` 是源头，两个 ps1 是薄包装；它现在会同时拉起 Python 后端和 React 前端，运行期文件落在仓库根目录的 `.runtime/`，`Go_XIEXin.exe` 是其打包产物。
+`Go_XIEXin.py` 是源头，两个 ps1 是薄包装；它现在会同时拉起 Python 后端和 Taro H5 前端，运行期文件落在仓库根目录的 `.runtime/`，`Go_XIEXin.exe` 是其打包产物。

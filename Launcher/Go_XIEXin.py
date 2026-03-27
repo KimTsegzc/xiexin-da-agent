@@ -16,7 +16,7 @@ from urllib.request import urlopen
 DEFAULT_PORT = 8501
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_BACKEND_PORT = 8765
-START_TIMEOUT_SECONDS = 45
+START_TIMEOUT_SECONDS = 90
 FRONTEND_PID_TEMPLATE = "frontend-{port}.pid"
 FRONTEND_STDOUT_TEMPLATE = "frontend-{port}.out.log"
 FRONTEND_STDERR_TEMPLATE = "frontend-{port}.err.log"
@@ -25,7 +25,7 @@ BACKEND_STDOUT_TEMPLATE = "backend-{port}.out.log"
 BACKEND_STDERR_TEMPLATE = "backend-{port}.err.log"
 LAUNCHER_LOG_NAME = "go_xiexin.log"
 RUNTIME_DIR_NAME = ".runtime"
-FRONTEND_DIR = Path("Gateway") / "Front" / "react-ui"
+FRONTEND_DIR = Path("Gateway") / "Front" / "taro-mobile"
 BACKEND_SCRIPT = Path("orchestrator.py")
 CREATE_NO_WINDOW = 0x08000000
 
@@ -250,7 +250,7 @@ def start_frontend(repo_root: Path, port: int, python_override: str, launch_brow
     logger.info("launcher start requested port=%s repo_root=%s frozen=%s", port, repo_root, is_frozen())
 
     if not frontend_dir.exists():
-        message = f"React frontend not found: {frontend_dir}"
+        message = f"Taro frontend not found: {frontend_dir}"
         logger.error(message)
         show_messagebox("Go_XIEXin", message, error=True)
         return 1
@@ -289,6 +289,7 @@ def start_frontend(repo_root: Path, port: int, python_override: str, launch_brow
 
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
+    env["TARO_APP_API_BASE"] = f"http://{DEFAULT_HOST}:{DEFAULT_BACKEND_PORT}"
 
     logger.info("starting orchestrator backend with python=%s script=%s", python_path, backend_script)
     with paths["backend_stdout_log"].open("ab") as backend_stdout_handle, paths["backend_stderr_log"].open("ab") as backend_stderr_handle:
@@ -324,16 +325,18 @@ def start_frontend(repo_root: Path, port: int, python_override: str, launch_brow
         show_messagebox("Go_XIEXin", message, error=True)
         return 1
 
-    logger.info("starting react frontend with npm=%s dir=%s", npm_path, frontend_dir)
+    logger.info("starting taro frontend with npm=%s dir=%s port=%s", npm_path, frontend_dir, port)
     with paths["frontend_stdout_log"].open("ab") as stdout_handle, paths["frontend_stderr_log"].open("ab") as stderr_handle:
         process = subprocess.Popen(
             [
                 str(npm_path),
-                "run",
-                "dev",
+                "exec",
                 "--",
-                "--host",
-                "0.0.0.0",
+                "taro",
+                "build",
+                "--type",
+                "h5",
+                "--watch",
                 "--port",
                 str(port),
             ],
