@@ -113,6 +113,11 @@ if [[ -f "$ROOT_DIR/requirements.txt" ]]; then
   pip install -r "$ROOT_DIR/requirements.txt"
 fi
 
+if python -m pip show streamlit >/dev/null 2>&1; then
+  echo "[INFO] Removing legacy Streamlit package"
+  pip uninstall -y streamlit >/dev/null 2>&1 || true
+fi
+
 if [[ -f "$ROOT_DIR/pyproject.toml" ]]; then
   echo "[INFO] Installing project package in editable mode"
   pip install -e "$ROOT_DIR"
