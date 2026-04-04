@@ -12,7 +12,7 @@ from Gateway.Back.settings import get_settings
 
 
 STREAM_SERVER_HOST = "0.0.0.0"
-STREAM_SERVER_PORT = 8765
+STREAM_SERVER_PORT = 8766
 
 _STREAM_SERVER = None
 _STREAM_SERVER_THREAD = None
