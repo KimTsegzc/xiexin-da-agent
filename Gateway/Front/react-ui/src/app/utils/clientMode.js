@@ -69,7 +69,7 @@ export function resolveApiBase() {
   const injected = readInjectedApiBase();
   if (injected) return injected;
 
-  const safeProtocol = window.location.protocol === "https:" ? "https:" : "http:";
-  const originCandidate = resolveOriginCandidate();
-  return `${safeProtocol}//${originCandidate.hostname}:${API_PORT}`;
+  // API is routed through nginx on the same origin (port 80/443).
+  // No separate API_PORT needed; avoids firewall / security-group issues.
+  return window.location.origin;
 }

@@ -2,8 +2,9 @@
 set -euo pipefail
 
 FRONTEND_URL="${FRONTEND_URL:-http://127.0.0.1:8501}"
-BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://127.0.0.1:8765/health}"
-BACKEND_CONFIG_URL="${BACKEND_CONFIG_URL:-http://127.0.0.1:8765/api/frontend-config}"
+# Backend binds to 127.0.0.1:8766 (internal). Check it directly to avoid nginx dependency.
+BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://127.0.0.1:8766/health}"
+BACKEND_CONFIG_URL="${BACKEND_CONFIG_URL:-http://127.0.0.1:8766/api/frontend-config}"
 CHECK_RETRIES="${CHECK_RETRIES:-30}"
 CHECK_INTERVAL_SECONDS="${CHECK_INTERVAL_SECONDS:-2}"
 
