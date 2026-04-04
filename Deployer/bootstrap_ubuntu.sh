@@ -108,8 +108,11 @@ fi
 source "$VENV_DIR/bin/activate"
 python -m pip install --upgrade pip wheel setuptools
 
-if [[ -f "$ROOT_DIR/requirements.txt" ]]; then
-  echo "[INFO] Installing Python dependencies from requirements.txt"
+if [[ -f "$ROOT_DIR/pyproject.toml" ]]; then
+  echo "[INFO] Installing project package from pyproject.toml (single source of truth)"
+  pip install -e "$ROOT_DIR"
+elif [[ -f "$ROOT_DIR/requirements.txt" ]]; then
+  echo "[INFO] pyproject.toml not found, falling back to requirements.txt"
   pip install -r "$ROOT_DIR/requirements.txt"
 fi
 
@@ -118,10 +121,8 @@ if python -m pip show streamlit >/dev/null 2>&1; then
   pip uninstall -y streamlit >/dev/null 2>&1 || true
 fi
 
-if [[ -f "$ROOT_DIR/pyproject.toml" ]]; then
-  echo "[INFO] Installing project package in editable mode"
-  pip install -e "$ROOT_DIR"
-fi
+echo "[INFO] Configuring npm registry mirror"
+npm config set registry https://registry.npmmirror.com
 
 if [[ -f "$FRONTEND_DIR/package-lock.json" ]]; then
   echo "[INFO] Installing frontend dependencies with npm ci"

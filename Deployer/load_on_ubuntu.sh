@@ -6,6 +6,11 @@ set -euo pipefail
 # Optional overrides:
 #   APP_USER=xiexin APP_DIR=/srv/xiexin-da-agent BRANCH=xiexin-vite-proto bash Deployer/load_on_ubuntu.sh
 
+mkdir -p ~/.pip
+echo "[global]" > ~/.pip/pip.conf
+echo "index-url = https://pypi.tuna.tsinghua.edu.cn/simple" >> ~/.pip/pip.conf
+echo "trusted-host = pypi.tuna.tsinghua.edu.cn" >> ~/.pip/pip.conf  # 信任源（避免 HTTPS 证书问题）
+
 APP_USER="${APP_USER:-xiexin}"
 APP_DIR="${APP_DIR:-/srv/xiexin-da-agent}"
 GIT_URL="${GIT_URL:-https://github.com/KimTsegzc/xiexin-da-agent.git}"
@@ -194,6 +199,10 @@ PY
 id -u "$APP_USER" >/dev/null 2>&1 || adduser --disabled-password --gecos "" "$APP_USER"
 mkdir -p /srv
 
+# Write pip mirror config for app user (runs as APP_USER so root's ~/.pip/pip.conf is not inherited)
+su - "$APP_USER" -c 'mkdir -p ~/.pip && printf "[global]\nindex-url = https://pypi.tuna.tsinghua.edu.cn/simple\ntrusted-host = pypi.tuna.tsinghua.edu.cn\n" > ~/.pip/pip.conf'
+log_info "pip mirror configured for $APP_USER"
+
 echo "[STEP] Clone/update repository"
 if [[ ! -d "$APP_DIR/.git" ]]; then
   su - "$APP_USER" -c "git clone -b '$BRANCH' '$GIT_URL' '$APP_DIR'"
@@ -243,7 +252,7 @@ NPM_PATH="$(command -v npm || true)"
 
 if [[ -n "$PY_PATH" ]]; then
   CURRENT_BACKEND_EXEC="$(grep '^ExecStart=' /etc/systemd/system/xiexin-backend.service || true)"
-  EXPECTED_BACKEND_EXEC="ExecStart=${PY_PATH} ${APP_DIR}/orchestrator.py --serve --host 0.0.0.0 --port 8765"
+  EXPECTED_BACKEND_EXEC="ExecStart=${PY_PATH} ${APP_DIR}/orchestrator.py --serve --host 127.0.0.1 --port 8766"
   if [[ "$CURRENT_BACKEND_EXEC" != "$EXPECTED_BACKEND_EXEC" ]]; then
     sed -i "s|^ExecStart=.*orchestrator.py.*|${EXPECTED_BACKEND_EXEC}|" /etc/systemd/system/xiexin-backend.service
     UNITS_CHANGED=1
