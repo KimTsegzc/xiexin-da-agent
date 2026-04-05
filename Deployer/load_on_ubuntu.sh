@@ -13,8 +13,8 @@ echo "trusted-host = pypi.tuna.tsinghua.edu.cn" >> ~/.pip/pip.conf  # 信任源�
 
 APP_USER="${APP_USER:-xiexin}"
 APP_DIR="${APP_DIR:-/srv/xiexin-da-agent}"
-GIT_URL="${GIT_URL:-https://github.com.cnpmjs.org/KimTsegzc/xiexin-da-agent.git}"
-GITHUB_HTTPS_MIRROR="${GITHUB_HTTPS_MIRROR:-https://github.com.cnpmjs.org/}"
+GIT_URL="${GIT_URL:-https://github.com/KimTsegzc/xiexin-da-agent.git}"
+GITHUB_HTTPS_MIRROR="${GITHUB_HTTPS_MIRROR:-}"
 BRANCH="${BRANCH:-xiexin-vite-proto}"
 FORCE_BOOTSTRAP="${FORCE_BOOTSTRAP:-0}"
 USE_DEADSNAKES="${USE_DEADSNAKES:-}"

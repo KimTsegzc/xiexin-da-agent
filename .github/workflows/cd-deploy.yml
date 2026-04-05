@@ -25,7 +25,6 @@ jobs:
           script: |
             set -euo pipefail
             echo "[INFO] Starting deployment..."
-            git config --global url."https://github.com.cnpmjs.org/".insteadOf "https://github.com/"
             
             # Configure GitHub SSH key for root (for git operations)
             mkdir -p /root/.ssh
@@ -35,7 +34,7 @@ jobs:
             cd /srv/xiexin-da-agent || exit 1
             
             # 拉取最新代码并启动服务
-            BRANCH=main GIT_URL=https://github.com.cnpmjs.org/KimTsegzc/xiexin-da-agent.git bash Deployer/pull_and_start.sh
+            BRANCH=main GIT_URL=https://github.com/KimTsegzc/xiexin-da-agent.git bash Deployer/pull_and_start.sh
             
             echo "[INFO] Deployment script completed"
 
