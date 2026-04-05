@@ -26,6 +26,11 @@ jobs:
             set -euo pipefail
             echo "[INFO] Starting deployment..."
             
+            # Configure GitHub SSH key for root (for git operations)
+            mkdir -p /root/.ssh
+            chmod 700 /root/.ssh
+            ssh-keyscan -t ed25519,rsa github.com >> /root/.ssh/known_hosts 2>/dev/null || true
+            
             cd /srv/xiexin-da-agent || exit 1
             
             # 拉取最新代码并启动服务

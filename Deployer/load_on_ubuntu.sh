@@ -13,7 +13,7 @@ echo "trusted-host = pypi.tuna.tsinghua.edu.cn" >> ~/.pip/pip.conf  # 信任源�
 
 APP_USER="${APP_USER:-xiexin}"
 APP_DIR="${APP_DIR:-/srv/xiexin-da-agent}"
-GIT_URL="${GIT_URL:-https://github.com/KimTsegzc/xiexin-da-agent.git}"
+GIT_URL="${GIT_URL:-git@github.com:KimTsegzc/xiexin-da-agent.git}"
 BRANCH="${BRANCH:-xiexin-vite-proto}"
 FORCE_BOOTSTRAP="${FORCE_BOOTSTRAP:-0}"
 USE_DEADSNAKES="${USE_DEADSNAKES:-}"
@@ -156,6 +156,11 @@ log_info "BRANCH=$BRANCH"
 echo "[STEP] Install base packages"
 apt-get -o Acquire::ForceIPv4=true update
 apt-get install -y git curl ca-certificates sudo nginx software-properties-common python3 python3-pip
+
+# Configure SSH for GitHub access
+mkdir -p /root/.ssh
+ssh-keyscan -t ed25519,rsa github.com >> /root/.ssh/known_hosts 2>/dev/null || true
+chmod 700 /root/.ssh
 
 resolve_deadsnakes_choice
 
