@@ -11,8 +11,8 @@ EnvironmentFile=/srv/xiexin-da-agent/.env
 ExecStart=/srv/xiexin-da-agent/.venv311/bin/python /srv/xiexin-da-agent/orchestrator.py --serve --host 127.0.0.1 --port 8766
 Restart=always
 RestartSec=3
-StandardOutput=append:/srv/xiexin-da-agent/.runtime/backend-8765.out.log
-StandardError=append:/srv/xiexin-da-agent/.runtime/backend-8765.err.log
+StandardOutput=append:/srv/xiexin-da-agent/.runtime/backend-8766.out.log
+StandardError=append:/srv/xiexin-da-agent/.runtime/backend-8766.err.log
 
 [Install]
 WantedBy=multi-user.target

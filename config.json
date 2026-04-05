@@ -1,8 +1,8 @@
 {
   "config_to": "./Gateway/Back/llm_provider.py",
-  "config_desc": "Configuration for LLM provider runtime: API auth, endpoint, system prompt, and generation defaults.",
+  "config_desc": "Legacy sample only. Runtime config now comes from environment variables /.env.",
   "llm_provider_config": {
-    "api_key": "sk-21e4448b65a34894a10bed4bac3fd09d",
+    "api_key": "<DO_NOT_STORE_REAL_KEY_IN_REPO>",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "system_prompt": "You are a helpful assistant.",
     "temperature": 0.7

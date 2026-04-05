@@ -32,7 +32,7 @@ Gateway/Front/
 
 前端并不是单独项目，它和后端 `orchestrator.py` 配套运行：
 
-1. 启动器 `Launcher/Go_XIEXin.py` 启动后端服务（默认 `8765`）
+1. 启动器 `Launcher/Go_XIEXin.py` 启动后端服务（默认 `8766`）
 2. 同时启动 `Gateway/Front/react-ui`（Vite，默认 `8501`）
 3. 前端通过 HTTP 调后端接口：
 - `GET /api/frontend-config`：获取模型列表与默认模型
@@ -229,7 +229,7 @@ npm run dev
 
 2. 流式不动
 - 检查 `POST /api/chat/stream`
-- 看 `.runtime/backend-8765*.log`
+- 看 `.runtime/backend-8766*.log`
 
 3. 移动端键盘导致错位
 - 先确认是否进入 `welcomeLockActive`

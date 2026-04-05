@@ -319,5 +319,5 @@ systemctl --no-pager --full status xiexin-backend xiexin-frontend nginx || true
 echo
 echo "[INFO] Access:"
 echo "  - http://<public-ip>/"
-echo "  - http://<public-ip>:8765/health"
-echo "[INFO] Tencent Cloud security group: allow TCP 80 and TCP 8765"
+echo "  - http://<public-ip>/health"
+echo "[INFO] Tencent Cloud security group: allow TCP 80 (and 443 if HTTPS is enabled)"

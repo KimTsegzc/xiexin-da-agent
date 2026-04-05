@@ -67,17 +67,13 @@ else
   warn "No .env found at project root"
 fi
 
-if [[ -f "$ROOT_DIR/config.json" ]]; then
-  pass "Found config.json (legacy fallback available)"
-fi
-
 if [[ -f "$FRONTEND_DIR/package-lock.json" ]]; then
   pass "Found package-lock.json"
 else
   warn "package-lock.json missing; npm install will be used instead of npm ci"
 fi
 
-for port in 8501 8765; do
+for port in 8501 8766; do
   if ss -ltn "( sport = :$port )" 2>/dev/null | tail -n +2 | grep -q ":$port"; then
     warn "Port $port is already in use"
   else
