@@ -1,5 +1,5 @@
 export const HERO_TEXT = "我是鑫哥，帮你搞搞数据";
-export const API_PORT = 8765;
+export const API_PORT = 8766;
 export const STREAM_PATH = "/api/chat/stream";
 export const CONFIG_PATH = "/api/frontend-config";
 export const AVATAR_IMAGE_PATH = "/xiexin-avatar.png";

@@ -20,7 +20,7 @@ export default defineConfig({
     port: 8501,
     // Proxy API calls to the backend orchestrator so that
     // `npm run dev` works without a separate nginx setup.
-    // Launcher/deployer defaults to 8766; custom setups can override via
+    // Launcher defaults to 8766; production-like local setups can override via
     // XIEXIN_BACKEND_PORT or BACKEND_PORT.
     proxy: {
       "/api": {
