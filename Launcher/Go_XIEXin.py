@@ -15,7 +15,7 @@ from urllib.request import urlopen
 
 DEFAULT_PORT = 8501
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_BACKEND_PORT = 8765
+DEFAULT_BACKEND_PORT = 8766
 START_TIMEOUT_SECONDS = 45
 FRONTEND_PID_TEMPLATE = "frontend-{port}.pid"
 FRONTEND_STDOUT_TEMPLATE = "frontend-{port}.out.log"
