@@ -16,7 +16,8 @@ AVAILABLE_MODELS: list[str] = [
     "qwen3.5-plus",
     "qwen3-max",
     "qwen3.5-flash",
-    "qwen-turbo"
+    "qwen-turbo",
+    "glm-5"
 ]
 
 _SOUL_FILE = REPO_ROOT / "soul.md"
