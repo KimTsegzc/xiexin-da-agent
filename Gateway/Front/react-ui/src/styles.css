@@ -1,0 +1,1429 @@
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-soft: #f6f6f6;
+  --ink: #171717;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --shadow-soft: 0 12px 28px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.05);
+  --line-width: 1px;
+  --welcome-stack-gap: 2vh;
+  --welcome-title-composer-gap: 4vh;
+  --welcome-stack-shift: 10vh;
+  --welcome-top-offset: 4vh;
+  --chat-stack-gap: 2vh;
+  --chat-rail-width: 92px;
+  --chat-rail-gap: 28px;
+  --settings-column-left: max(16px, calc((100vw - var(--content-width)) / 2));
+  --settings-toggle-size: 56px;
+  --settings-toggle-radius: 14px;
+  --chat-composer-height: 68px;
+  --settings-left: calc(var(--settings-column-left) + (var(--chat-rail-width) - var(--settings-toggle-size)) / 2);
+  --settings-bottom: calc(var(--composer-bottom) + var(--keyboard-offset) + (var(--chat-composer-height) - var(--settings-toggle-size)) / 2);
+  --chat-rail-top: 44px;
+  --content-width: min(1220px, calc(100vw - 52px));
+  --composer-bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  --app-height: 100vh;
+  --app-height-stable: 100vh;
+  --app-width: 100vw;
+  --app-width-stable: 100vw;
+  --keyboard-offset: 0px;
+  --thread-scroll-gutter: 16px;
+  --thread-composer-gap: 2%;
+  --thread-surface-offset: calc(var(--chat-composer-height) + var(--composer-bottom) + 6px);
+  --thread-content-tail-space: 4px;
+  --topbar-top: max(16px, env(safe-area-inset-top, 0px));
+  --topbar-right: 16px;
+  --welcome-mobile-top-band: clamp(92px, 17vh, 176px);
+  --welcome-mobile-bottom-band: clamp(18px, 6vh, 56px);
+  --welcome-mobile-top-flex: 1fr;
+  --welcome-mobile-bottom-flex: 0.75fr;
+  --welcome-mobile-row-gap: clamp(14px, 2.6vh, 22px);
+  --welcome-mobile-avatar-title-gap: var(--welcome-mobile-row-gap);
+  --welcome-mobile-title-composer-gap: var(--welcome-mobile-row-gap);
+  --welcome-mobile-title-size: clamp(23px, 6.6vw, 32px);
+  --welcome-mobile-composer-width: min(920px, calc(var(--app-width) - 24px));
+  --welcome-mobile-composer-height: 58px;
+  --wechat-welcome-lock-bottom: 41vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: var(--app-height);
+  height: var(--app-height);
+  background: var(--bg);
+  margin: 0;
+  overscroll-behavior-y: none;
+}
+
+html[data-welcome-lock="true"],
+body[data-welcome-lock="true"] {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html[data-app-lock="true"],
+body[data-app-lock="true"] {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: #ffffff;
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: var(--app-height);
+  padding: clamp(14px, 1.8vw, 24px);
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.app-shell.welcome-mode {
+  height: var(--app-height);
+  min-height: unset;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  row-gap: var(--welcome-stack-gap);
+  padding-top: var(--welcome-top-offset);
+}
+
+.topbar {
+  width: auto;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: fixed;
+  left: var(--settings-left);
+  bottom: var(--settings-bottom);
+  z-index: 5;
+}
+
+.topbar-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.avatar-hitbox {
+  position: relative;
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.avatar-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+  transition: opacity 0.14s ease;
+}
+
+.avatar-image {
+  opacity: 1;
+}
+
+.avatar-video {
+  opacity: 0;
+  background: transparent;
+}
+
+.avatar-video.is-visible {
+  opacity: 1;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 24;
+}
+
+.settings-toggle,
+.newchat-toggle {
+  width: var(--settings-toggle-size);
+  height: var(--settings-toggle-size);
+  border: var(--line-width) solid var(--line);
+  border-radius: var(--settings-toggle-radius);
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.newchat-toggle {
+  position: absolute;
+  left: 0;
+  padding: 0;
+  z-index: 27;
+}
+
+.app-shell.is-wechat .newchat-toggle,
+.app-shell.is-mobile-default .newchat-toggle {
+  border-radius: calc(var(--settings-toggle-radius) - 1px);
+}
+
+.newchat-toggle.is-above {
+  bottom: calc(100% + 8px);
+}
+
+.newchat-toggle.is-below {
+  top: calc(100% + 8px);
+}
+
+.newchat-toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke: #111111;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.app-shell.is-wechat .newchat-toggle.is-above,
+.app-shell.is-mobile-default .newchat-toggle.is-above {
+  bottom: calc(100% + 8px);
+}
+
+.app-shell.is-wechat .newchat-toggle.is-below,
+.app-shell.is-mobile-default .newchat-toggle.is-below {
+  top: calc(100% + 8px);
+}
+
+.settings-toggle span {
+  width: 20px;
+  height: 2px;
+  background: #111111;
+  border-radius: 999px;
+  position: absolute;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.settings-toggle span:nth-child(1) {
+  transform: translateY(-6px);
+}
+
+.settings-toggle span:nth-child(2) {
+  transform: translateY(0);
+}
+
+.settings-toggle span:nth-child(3) {
+  transform: translateY(6px);
+}
+
+.settings-toggle.is-open span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.settings-toggle.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.settings-toggle.is-open span:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+.settings-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: min(220px, calc(100vw - 48px));
+  padding: 12px;
+  border-radius: 18px;
+  border: var(--line-width) solid var(--line);
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+  z-index: 28;
+}
+
+.settings-title {
+  margin-bottom: 8px;
+  font-size: 14px;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--muted);
+}
+
+.settings-list {
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.settings-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.settings-option {
+  min-height: 40px;
+  border-radius: 12px;
+  border: var(--line-width) solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  text-align: left;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.settings-option.is-selected {
+  border-color: #d1d5db;
+  background: #ffffff;
+}
+
+.settings-option.is-active {
+  border-color: #d1d5db;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.04);
+}
+
+.hero-panel {
+  width: var(--content-width);
+  margin: max(44px, 7.5vh) auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.welcome-stack-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.welcome-mode .hero-panel {
+  width: min(var(--content-width), calc(100vw - 32px));
+  margin: 0;
+  justify-content: flex-start;
+  gap: var(--welcome-stack-gap);
+  transform: translateY(var(--welcome-stack-shift));
+}
+
+.hero-avatar {
+  width: clamp(110px, 13vw, 150px);
+  height: clamp(110px, 13vw, 150px);
+  border-radius: 50%;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: center;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(28px, 3.55vw, 48px);
+  line-height: 1.08;
+  font-weight: 700;
+  max-width: 920px;
+}
+
+.chat-stage {
+  width: var(--content-width);
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.chat-mode .chat-stage {
+  display: grid;
+  grid-template-columns: var(--chat-rail-width) minmax(0, 1fr);
+  column-gap: var(--chat-rail-gap);
+  align-items: stretch;
+  z-index: 8;
+}
+
+.chat-rail {
+  display: none;
+}
+
+.chat-mode .chat-rail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.chat-rail-inner {
+  position: fixed;
+  left: var(--settings-column-left);
+  top: 0;
+  width: var(--chat-rail-width);
+  height: var(--app-height);
+  z-index: 24;
+}
+
+.chat-rail-avatar {
+  position: fixed;
+  left: calc(var(--settings-column-left) + (var(--chat-rail-width) - 76px) / 2);
+  top: var(--chat-rail-top);
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+}
+
+.chat-rail-settings {
+  position: fixed;
+  left: var(--settings-left);
+  bottom: var(--settings-bottom);
+  display: flex;
+  justify-content: center;
+  width: var(--settings-toggle-size);
+  z-index: 24;
+}
+
+.welcome-mode .chat-stage {
+  display: none;
+}
+
+.chat-mode .chat-stage {
+  margin-top: 20px;
+}
+
+.chat-surface {
+  min-height: min(56vh, 540px);
+  max-height: calc(var(--app-height) - 188px - var(--thread-surface-offset) - env(safe-area-inset-bottom, 0px));
+  width: calc(100% + var(--thread-scroll-gutter));
+  margin-right: calc(var(--thread-scroll-gutter) * -1);
+  padding: 20px var(--thread-scroll-gutter) var(--thread-content-tail-space) 8px;
+  overflow-y: auto;
+  overflow-x: visible;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.chat-mode .chat-surface {
+  min-height: 0;
+  max-height: calc(var(--app-height) - 132px - var(--thread-surface-offset) - env(safe-area-inset-bottom, 0px));
+  padding: 4px var(--thread-scroll-gutter) var(--thread-content-tail-space) 0;
+}
+
+.chat-surface::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.chat-surface::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-surface::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.chat-surface::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.message-row {
+  display: flex;
+  margin-bottom: 18px;
+}
+
+.message-row.user {
+  justify-content: flex-end;
+}
+
+.message-row.assistant {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  max-width: min(78%, 760px);
+  padding: 16px 18px;
+  border-radius: 24px;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035), 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.message-row.user .message-bubble {
+  background: #111111;
+  color: #ffffff;
+  border-bottom-right-radius: 10px;
+  border-color: #111111;
+}
+
+.message-row.assistant .message-bubble {
+  border-bottom-left-radius: 10px;
+}
+
+.message-row.assistant .message-bubble {
+  display: flex;
+  flex-direction: column;
+  max-height: min(68vh, 760px);
+}
+
+.message-content {
+  line-height: 1.68;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-row.assistant .message-content {
+  max-height: min(58vh, 660px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  width: calc(100% + 20px);
+  margin-right: -20px;
+  padding-right: 20px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.message-row.assistant .message-content::-webkit-scrollbar {
+  width: 12px;
+}
+
+.message-row.assistant .message-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-row.assistant .message-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.message-row.assistant .message-content::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.message-content p,
+.message-content ul,
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+  margin: 0 0 12px;
+}
+
+.message-content > :last-child {
+  margin-bottom: 0;
+}
+
+.message-content ul {
+  padding-left: 20px;
+}
+
+.message-content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.message-content code {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-family: "Consolas", monospace;
+  font-size: 0.92em;
+}
+
+.message-meta {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.composer-shell {
+  position: fixed;
+  left: 50%;
+  bottom: var(--composer-bottom);
+  width: min(1260px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  z-index: 4;
+  max-height: calc(var(--app-height) - 20px);
+  transition: width 0.2s ease;
+}
+
+.chat-mode .composer-shell {
+  width: calc(var(--content-width) - var(--chat-rail-width) - var(--chat-rail-gap));
+  left: calc(50% + (var(--chat-rail-width) + var(--chat-rail-gap)) / 2);
+  transform: translateX(-50%);
+}
+
+.welcome-mode .composer-shell {
+  position: static;
+  width: min(880px, calc(100vw - 80px));
+  margin-top: calc(var(--welcome-title-composer-gap) - var(--welcome-stack-gap));
+  transform: translateY(var(--welcome-stack-shift));
+}
+
+.composer-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 8px 2.1%;
+  border-radius: 30px;
+  background: #ffffff;
+  border: var(--line-width) solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+.welcome-mode .composer-box {
+  min-height: 64px;
+}
+
+.composer-leading {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.composer-model {
+  max-width: 160px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: #444444;
+  font-size: 12px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.composer-box textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  max-height: 136px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  line-height: 1.45;
+  font-size: 16px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 0;
+}
+
+.composer-box textarea:focus,
+.composer-box textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.welcome-mode .composer-box.is-empty textarea {
+  flex: 1;
+}
+
+.composer-box textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.composer-box textarea::placeholder {
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+  color: #b5b5b5;
+}
+
+.send-button {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #111111;
+  border-radius: 50%;
+  background: #111111;
+  color: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  margin-left: auto;
+  margin-top: 0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.send-button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+@media (min-width: 901px) {
+  .app-shell.chat-mode {
+    height: var(--app-height);
+    overflow: hidden;
+  }
+
+  .chat-mode .topbar {
+    display: none;
+  }
+
+  .chat-mode .chat-stage {
+    height: calc(var(--app-height) - 20px - var(--thread-surface-offset) - var(--chat-stack-gap));
+    align-items: start;
+  }
+
+  .chat-mode .chat-surface {
+    min-height: 0;
+    height: calc(100% - 2%);
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px var(--thread-scroll-gutter) var(--thread-content-tail-space) 0;
+  }
+
+  .settings-popover {
+    position: fixed;
+    left: calc(var(--settings-left) + var(--settings-toggle-size) + 8px);
+    bottom: calc(var(--settings-bottom) - 10px);
+    z-index: 40;
+  }
+
+  .chat-mode .settings-title {
+    font-size: 13px;
+  }
+
+  .chat-mode .settings-option {
+    font-size: 13px;
+  }
+
+  .chat-mode .chat-rail,
+  .chat-mode .chat-rail-inner,
+  .chat-mode .chat-rail-settings,
+  .chat-mode .topbar-actions {
+    z-index: 40;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --content-width: calc(var(--app-width) - 24px);
+    --composer-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+    --welcome-stack-gap: 2vh;
+    --welcome-title-composer-gap: 4vh;
+    --welcome-stack-shift: 0px;
+    --welcome-top-offset: 6vh;
+    --settings-column-left: 12px;
+    --settings-toggle-size: 48px;
+    --settings-toggle-radius: 12px;
+    --chat-composer-height: 62px;
+    --settings-left: calc(var(--settings-column-left) + (var(--chat-rail-width) - var(--settings-toggle-size)) / 2);
+    --settings-bottom: calc(var(--composer-bottom) + var(--keyboard-offset) + (var(--chat-composer-height) - var(--settings-toggle-size)) / 2);
+    --chat-rail-top: 18px;
+    --thread-scroll-gutter: 14px;
+    --thread-composer-gap: 8px;
+    --thread-surface-offset: calc(var(--chat-composer-height) + var(--composer-bottom) + 6px);
+    --thread-content-tail-space: 6px;
+    --topbar-top: max(12px, calc(env(safe-area-inset-top, 0px) + 4px));
+    --topbar-right: 12px;
+  }
+
+  .app-shell {
+    padding: 12px;
+  }
+
+  .app-shell.welcome-mode {
+    min-height: var(--app-height);
+    height: var(--app-height);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(var(--welcome-mobile-top-band), var(--welcome-mobile-top-flex)) auto auto minmax(var(--welcome-mobile-bottom-band), var(--welcome-mobile-bottom-flex));
+    justify-items: center;
+    align-content: stretch;
+    row-gap: 0;
+    padding-top: 0;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell.is-wechat,
+  .app-shell.is-mobile-default {
+    --settings-toggle-size: 38px;
+    --mobile-settings-title-size: 12px;
+    --mobile-settings-option-size: 12px;
+    --mobile-message-size: 13px;
+    --mobile-message-chat-size: 10.5px;
+    --mobile-model-size: 10px;
+    --mobile-model-chat-size: 8px;
+    --mobile-input-size: 16px;
+    --mobile-input-welcome-size: 13px;
+    --mobile-input-chat-size: 13px;
+    --mobile-input-chat-placeholder-size: 10.4px;
+    --mobile-send-size: 18px;
+    --mobile-send-welcome-size: 14px;
+    --mobile-send-chat-size: 13px;
+    --welcome-mobile-top-band: clamp(0px, 0.5vh, 8px);
+    --welcome-mobile-bottom-band: clamp(180px, 31vh, 280px);
+    --welcome-mobile-top-flex: 0.42fr;
+    --welcome-mobile-bottom-flex: 1.58fr;
+    --welcome-mobile-row-gap: clamp(16px, 4vw, 22px);
+    --welcome-mobile-avatar-title-gap: clamp(10px, 3vw, 16px);
+    --welcome-mobile-title-composer-gap: clamp(14px, 3.6vw, 22px);
+    --welcome-mobile-title-size: clamp(16px, 4.2vw, 20px);
+    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - 20px));
+    --welcome-mobile-composer-height: 58px;
+  }
+
+  .app-shell.is-mobile-default {
+    --settings-toggle-size: 46px;
+    --mobile-settings-title-size: 12px;
+    --mobile-settings-option-size: 12px;
+    --mobile-message-size: 26px;
+    --mobile-message-chat-size: 21px;
+    --mobile-model-size: 10px;
+    --mobile-model-chat-size: 8px;
+    --mobile-input-size: 32px;
+    --mobile-input-welcome-size: 18.2px;
+    --mobile-input-chat-size: 26px;
+    --mobile-input-chat-placeholder-size: 20.8px;
+    --mobile-send-size: 18px;
+    --mobile-send-welcome-size: 14px;
+    --mobile-send-chat-size: 13px;
+    --welcome-mobile-top-band: clamp(12px, 2.4vh, 26px);
+    --welcome-mobile-bottom-band: clamp(136px, 24vh, 220px);
+    --welcome-mobile-top-flex: 0.56fr;
+    --welcome-mobile-bottom-flex: 1.44fr;
+    --welcome-mobile-row-gap: clamp(14px, 3.2vw, 20px);
+    --welcome-mobile-avatar-title-gap: clamp(12px, 3.2vw, 18px);
+    --welcome-mobile-title-composer-gap: clamp(12px, 3vw, 18px);
+    --welcome-mobile-title-size: clamp(24px, 6.3vw, 31px);
+    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - 24px));
+  }
+
+  .app-shell.is-wechat.welcome-mode,
+  .app-shell.is-mobile-default.welcome-mode {
+    position: fixed;
+    inset: 0;
+    min-height: var(--app-height-stable);
+    height: var(--app-height-stable);
+    display: block;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .app-shell.is-wechat.welcome-mode .welcome-stack-shell,
+  .app-shell.is-mobile-default.welcome-mode .welcome-stack-shell {
+    position: absolute;
+    left: 50%;
+    bottom: var(--wechat-welcome-lock-bottom);
+    width: min(var(--content-width), calc(var(--app-width-stable) - 20px));
+    transform: translateX(-50%);
+    z-index: 6;
+  }
+
+  .app-shell.is-mobile-default.welcome-mode .welcome-stack-shell {
+    width: min(var(--content-width), calc(var(--app-width-stable) - 24px));
+  }
+
+  .topbar {
+    position: fixed;
+    top: var(--topbar-top);
+    right: var(--topbar-right);
+    left: auto;
+    bottom: auto;
+    justify-content: flex-end;
+    z-index: 40;
+  }
+
+  .app-shell.is-wechat .topbar,
+  .app-shell.is-mobile-default .topbar {
+    left: 50%;
+    right: auto;
+    width: calc(100vw - 24px);
+    transform: translateX(-50%);
+    justify-content: flex-start;
+  }
+
+  .app-shell.is-wechat.welcome-mode .topbar,
+  .app-shell.is-mobile-default.welcome-mode .topbar {
+    position: absolute;
+    top: var(--topbar-top);
+    left: 50%;
+    right: auto;
+    width: calc(100vw - 24px);
+    transform: translateX(-50%);
+    justify-content: flex-start;
+  }
+
+  .app-shell.is-mobile-default .topbar {
+    top: max(14px, calc(env(safe-area-inset-top, 0px) + 6px));
+  }
+
+  .app-shell.is-wechat .topbar-actions,
+  .app-shell.is-mobile-default .topbar-actions {
+    margin-left: auto;
+    margin-right: 2%;
+  }
+
+  .app-shell.is-mobile-default .topbar-actions {
+    margin-right: 0.5%;
+  }
+
+  .app-shell.is-mobile-default .settings-toggle span {
+    width: 19px;
+  }
+
+  .topbar .settings-popover {
+    top: 0;
+    right: calc(100% + 10px);
+    left: auto;
+    bottom: auto;
+  }
+
+  .app-shell.is-wechat .topbar .settings-popover,
+  .app-shell.is-mobile-default .topbar .settings-popover {
+    width: min(182px, calc(var(--app-width-stable) - 28px));
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .app-shell.is-wechat .settings-title,
+  .app-shell.is-mobile-default .settings-title {
+    margin-bottom: 6px;
+    font-size: var(--mobile-settings-title-size);
+  }
+
+  .app-shell.is-wechat .settings-list,
+  .app-shell.is-mobile-default .settings-list {
+    gap: 8px;
+    max-height: 120px;
+    padding-right: 1%;
+  }
+
+  .app-shell.is-wechat .settings-option,
+  .app-shell.is-mobile-default .settings-option {
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: var(--mobile-settings-option-size);
+    width: 98%;
+    justify-self: start;
+  }
+
+  .app-shell.is-mobile-default .settings-option {
+    width: 96%;
+  }
+
+  .hero-panel {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .welcome-mode .hero-panel {
+    grid-row: 2;
+    align-self: end;
+    width: min(var(--content-width), calc(var(--app-width) - 24px));
+    gap: var(--welcome-mobile-avatar-title-gap);
+    margin: 0;
+    transform: none;
+  }
+
+  .hero-avatar {
+    width: clamp(88px, 24vw, 108px);
+    height: clamp(88px, 24vw, 108px);
+  }
+
+  .hero-title {
+    font-size: var(--welcome-mobile-title-size);
+    line-height: 1.14;
+  }
+
+  .app-shell.is-wechat .hero-title,
+  .app-shell.is-mobile-default .hero-title {
+    max-width: none;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+  }
+
+  .app-shell.is-wechat.welcome-mode .hero-panel,
+  .app-shell.is-mobile-default.welcome-mode .hero-panel {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: 100%;
+    margin: 0;
+    transform: none;
+    z-index: 6;
+  }
+
+  .app-shell.is-mobile-default.welcome-mode .hero-panel {
+    gap: clamp(14px, 3.6vw, 22px);
+  }
+
+  .chat-stage {
+    width: 100%;
+  }
+
+  .chat-mode .chat-stage {
+    display: block;
+    margin-top: 6px;
+    z-index: 2;
+  }
+
+  .chat-surface {
+    min-height: 0;
+    max-height: calc(var(--app-height) - var(--thread-surface-offset) - 88px);
+    padding: 8px var(--thread-scroll-gutter) var(--thread-content-tail-space) 0;
+  }
+
+   .chat-mode .chat-rail {
+    display: none;
+  }
+
+  .chat-mode .topbar {
+    padding: 0;
+    left: var(--thread-scroll-gutter);
+    right: var(--thread-scroll-gutter);
+    justify-content: space-between;
+  }
+
+  .chat-mode .chat-stage {
+    position: relative;
+    min-height: calc(var(--app-height) - 24px - var(--thread-surface-offset));
+  }
+
+  .chat-mode .chat-surface {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(60px + 1%);
+    bottom: var(--thread-surface-offset);
+    max-height: none;
+    padding: 12px var(--thread-scroll-gutter) var(--thread-content-tail-space) 2px;
+  }
+
+  .app-shell.is-wechat.chat-mode,
+  .app-shell.is-mobile-default.chat-mode {
+    --chat-composer-height: 46px;
+    position: fixed;
+    inset: 0;
+    min-height: var(--app-height-stable);
+    height: var(--app-height-stable);
+    overflow: hidden;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .chat-stage {
+    margin-top: 0;
+    min-height: calc(var(--app-height-stable) - 8px);
+  }
+
+  .app-shell.is-wechat.chat-mode .topbar-avatar,
+  .app-shell.is-mobile-default.chat-mode .topbar-avatar {
+    width: 55px;
+    height: 55px;
+  }
+
+  .app-shell.is-wechat.chat-mode .composer-shell,
+  .app-shell.is-mobile-default.chat-mode .composer-shell {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--keyboard-offset) + var(--composer-bottom));
+    width: auto;
+    transform: none;
+    transition: none;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .chat-surface {
+    bottom: calc(var(--keyboard-offset) + var(--chat-composer-height) + var(--composer-bottom) + 6px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #c4c8cf transparent;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .chat-surface::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .chat-surface::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .chat-surface::-webkit-scrollbar-thumb {
+    background: #c4c8cf;
+    border-radius: 999px;
+  }
+
+  .app-shell.is-wechat.chat-mode .chat-stage,
+  .app-shell.is-mobile-default.chat-mode .chat-stage {
+    margin-top: 0;
+    min-height: var(--app-height-stable);
+  }
+
+  .app-shell.is-wechat.chat-mode .chat-surface,
+  .app-shell.is-mobile-default.chat-mode .chat-surface {
+    top: calc(54px + 1%);
+    bottom: calc(var(--keyboard-offset) + var(--thread-surface-offset));
+    padding-right: 12px;
+    padding-bottom: 0;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-row:last-child,
+  .app-shell.is-mobile-default.chat-mode .message-row:last-child {
+    margin-bottom: 6px;
+  }
+
+  .message-bubble {
+    max-width: 88%;
+    padding: 14px 16px;
+    border-radius: 22px;
+    font-size: 14px;
+  }
+
+  .app-shell.is-wechat .message-bubble,
+  .app-shell.is-mobile-default .message-bubble {
+    max-width: 86%;
+    padding: 12px 14px;
+    border-radius: 18px;
+    font-size: var(--mobile-message-size);
+  }
+
+  .message-row.assistant .message-bubble,
+  .message-row.assistant .message-content {
+    max-height: none;
+  }
+
+  .composer-shell {
+    width: calc(100vw - 24px);
+  }
+
+  .chat-mode .composer-shell {
+    left: 50%;
+    width: calc(100vw - 24px);
+    transform: translateX(-50%);
+  }
+
+  .welcome-mode .composer-shell {
+    grid-row: 3;
+    align-self: start;
+    width: var(--welcome-mobile-composer-width);
+    margin-top: var(--welcome-mobile-title-composer-gap);
+    transform: none;
+  }
+
+  .app-shell.is-wechat.welcome-mode .composer-shell,
+  .app-shell.is-mobile-default.welcome-mode .composer-shell {
+    position: static;
+    left: auto;
+    bottom: auto;
+    width: var(--welcome-mobile-composer-width);
+    margin-top: var(--welcome-mobile-title-composer-gap);
+    transform: none;
+    z-index: 6;
+  }
+
+  .app-shell.is-mobile-default.welcome-mode .composer-shell {
+    margin-top: clamp(10px, 2.2vh, 16px);
+  }
+
+  .app-shell.is-wechat.welcome-mode .composer-box,
+  .app-shell.is-mobile-default.welcome-mode .composer-box {
+    min-height: 52px;
+    padding: 5px 1.5%;
+    gap: 6px;
+    border-radius: 22px;
+  }
+
+  .app-shell.is-wechat.welcome-mode .composer-model,
+  .app-shell.is-mobile-default.welcome-mode .composer-model {
+    max-width: 106px;
+    padding: 5px 8px;
+    font-size: var(--mobile-model-chat-size);
+    letter-spacing: 0.02em;
+  }
+
+  .app-shell.is-wechat.welcome-mode .composer-box textarea,
+  .app-shell.is-mobile-default.welcome-mode .composer-box textarea {
+    font-size: var(--mobile-input-welcome-size);
+    min-height: 22px;
+    line-height: 1.3;
+  }
+
+  .app-shell.is-wechat.welcome-mode .composer-box textarea::placeholder,
+  .app-shell.is-mobile-default.welcome-mode .composer-box textarea::placeholder {
+    font-size: var(--mobile-input-welcome-size);
+    line-height: 1.3;
+  }
+
+  .app-shell.is-wechat.welcome-mode .send-button,
+  .app-shell.is-mobile-default.welcome-mode .send-button {
+    width: 34px;
+    height: 34px;
+    font-size: var(--mobile-send-welcome-size);
+  }
+
+  .app-shell.is-wechat .hero-avatar,
+  .app-shell.is-mobile-default .hero-avatar {
+    width: clamp(82px, 21vw, 96px);
+    height: clamp(82px, 21vw, 96px);
+  }
+
+  .app-shell.is-wechat.welcome-mode .hero-avatar,
+  .app-shell.is-mobile-default.welcome-mode .hero-avatar {
+    width: clamp(123px, 31.5vw, 144px);
+    height: clamp(123px, 31.5vw, 144px);
+  }
+
+  .app-shell.is-wechat .composer-box,
+  .app-shell.is-mobile-default .composer-box {
+    min-height: 58px;
+    padding: 6px 1.7%;
+    gap: 8px;
+    border-radius: 26px;
+  }
+
+  .app-shell.is-wechat .composer-model,
+  .app-shell.is-mobile-default .composer-model {
+    max-width: 132px;
+    padding: 6px 10px;
+    font-size: var(--mobile-model-size);
+    letter-spacing: 0.04em;
+  }
+
+  .app-shell.is-wechat .message-meta,
+  .app-shell.is-mobile-default .message-meta {
+    margin-top: 3px;
+    font-size: 9px;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-bubble,
+  .app-shell.is-mobile-default.chat-mode .message-bubble {
+    max-width: 86%;
+    padding: 10px 12px;
+    border-radius: 16px;
+    font-size: var(--mobile-message-chat-size);
+  }
+
+  .app-shell.is-mobile-default.chat-mode .message-bubble {
+    font-size: 16.8px;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-row.user .message-bubble,
+  .app-shell.is-mobile-default.chat-mode .message-row.user .message-bubble {
+    margin-right: 0;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-row.assistant .message-bubble,
+  .app-shell.is-wechat.chat-mode .message-row.assistant .message-content,
+  .app-shell.is-mobile-default.chat-mode .message-row.assistant .message-bubble,
+  .app-shell.is-mobile-default.chat-mode .message-row.assistant .message-content {
+    max-height: none;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-row.assistant .message-content,
+  .app-shell.is-mobile-default.chat-mode .message-row.assistant .message-content {
+    overflow: visible;
+    width: 100%;
+    margin-right: 0;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-content,
+  .app-shell.is-mobile-default.chat-mode .message-content {
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+  }
+
+  .app-shell.is-wechat.chat-mode .message-meta,
+  .app-shell.is-mobile-default.chat-mode .message-meta {
+    margin-top: 2px;
+    font-size: 7.2px;
+    letter-spacing: -0.01em;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .message-meta {
+    font-size: 11px;
+  }
+
+  .app-shell.is-wechat.chat-mode .composer-model,
+  .app-shell.is-mobile-default.chat-mode .composer-model {
+    font-size: var(--mobile-model-chat-size);
+    letter-spacing: 0.01em;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .composer-model {
+    font-size: 10.4px;
+    max-width: 172px;
+    padding: 7px 12px;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .settings-title {
+    font-size: 15.6px;
+  }
+
+  .app-shell.is-mobile-default.chat-mode .settings-option {
+    font-size: 15.6px;
+  }
+
+  .app-shell.is-wechat.chat-mode .composer-box,
+  .app-shell.is-mobile-default.chat-mode .composer-box {
+    min-height: 46px;
+    padding: 4px 1.4%;
+    gap: 6px;
+    border-radius: 22px;
+  }
+
+  .app-shell.is-wechat.chat-mode .composer-box textarea,
+  .app-shell.is-mobile-default.chat-mode .composer-box textarea {
+    font-size: var(--mobile-message-chat-size);
+    letter-spacing: -0.01em;
+    min-height: 20px;
+    line-height: 1.35;
+    padding: 0 0 0 2%;
+    align-self: center;
+  }
+
+  .app-shell.is-wechat .composer-box textarea,
+  .app-shell.is-mobile-default .composer-box textarea {
+    font-size: var(--mobile-input-size);
+  }
+
+  .app-shell.is-wechat .composer-box textarea::placeholder,
+  .app-shell.is-mobile-default .composer-box textarea::placeholder {
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: 0;
+  }
+
+  .app-shell.is-wechat.chat-mode .composer-box textarea::placeholder,
+  .app-shell.is-mobile-default.chat-mode .composer-box textarea::placeholder {
+    font-size: var(--mobile-message-chat-size);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  .app-shell.is-wechat .send-button,
+  .app-shell.is-mobile-default .send-button {
+    width: 42px;
+    height: 42px;
+    font-size: var(--mobile-send-size);
+  }
+
+  .app-shell.is-wechat.chat-mode .send-button,
+  .app-shell.is-mobile-default.chat-mode .send-button {
+    width: 29px;
+    height: 29px;
+    font-size: var(--mobile-send-chat-size);
+  }
+
+  .app-shell.is-wechat .settings-toggle,
+  .app-shell.is-mobile-default .settings-toggle {
+    border-radius: 10px;
+  }
+
+  .app-shell.is-wechat .settings-toggle span,
+  .app-shell.is-mobile-default .settings-toggle span {
+    width: 16px;
+  }
+
+  .app-shell.is-wechat .settings-toggle:not(.is-open) span:nth-child(1),
+  .app-shell.is-mobile-default .settings-toggle:not(.is-open) span:nth-child(1) {
+    transform: translateY(-5px);
+  }
+
+  .app-shell.is-wechat .settings-toggle:not(.is-open) span:nth-child(3),
+  .app-shell.is-mobile-default .settings-toggle:not(.is-open) span:nth-child(3) {
+    transform: translateY(5px);
+  }
+
+  .composer-box {
+    min-height: 62px;
+    padding: 8px 2.1%;
+    gap: 10px;
+    border-radius: 28px;
+  }
+
+  .chat-mode .composer-leading {
+    display: none;
+  }
+
+  .composer-box textarea {
+    font-size: 16px;
+  }
+
+  .send-button {
+    width: 46px;
+    height: 46px;
+  }
+}
