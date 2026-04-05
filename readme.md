@@ -1,37 +1,68 @@
-**This is a human write file './readme.md' to make things controllable.**
-**AI agents should read to understand.**
-**No AI should/could/would make any change.**
+# XIEXin DA Agent
 
-<!-- STATEMENT -->
-# project statement
-## This is an AI native or say AI ready project.
-## Readme is a charter of this project.
-## some detailed defines the way of building loads in ./architect.md.
+Version: 8.0.0
 
-<!-- INFO -->
-# project info
-- **Author:**   XIE Xin
-- **Name:**     XIEXin_da_agent
-- **Design and Devloped in:** Guangzhou
-- *Version:*    2.3
+XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：后端提供流式 LLM 接口，前端提供桌面 / 移动 / 微信兼容聊天界面，部署链路基于 Ubuntu + systemd + nginx，并已接入基础 CI/CD。
 
-<!-- SCOPE -->
-# Project Scope 
-## an Agent that helps Data analysist to work seamlessly. in a agentic way:
-## There are skill set to provide skills, and the main ./orchestrator.py would be central dispatcher.
-1. skill-res:       Recognize and resolve the data.
-2. skill-peel:      Deal with columns and rows.
-3. skill-pretty:    Prettify the table with embeded formats.
-4. skill-viz:       Provides Visuallization toolkits.
-5. skill-stat:      Offers basic statistical methods to descriptive/predictive analysis.
-6. skill-comm:      LLM-based Comments on data comprehension.
-7. skill-advs:      LLM-based advice to do work, WorkingEnviroments/Goals/Rules/KnowledgeBase needed.
+## 当前主体架构
 
-<!-- Directories -->
-# Directories
-It has:
-1. **Memo:** contains ./Memo/metadata, some metadata like Dict.json a mapping for columns to select and rename. and other groups xlsx may be packed up here.
-2. **Skills:** ./Skills/sudo-name-skill kebab-case named skill folders, with a .md file to anounce it which has name same as skill(constraint with JSON Schema for input and output),  a scripts, an input and a output foder inside.
-3. **Gateway:** has ./Gateway/LLM provides LLM service. ./Gateway/Front as UI page.
-4. **orchestrator.py** main controlling process, **Human built, AI can read but never make any change**.
-5. **Launcher:** support Go_XIEXin.exe as a Launcher.
+- `orchestrator.py`：统一 HTTP 入口，提供 `/health`、`/api/frontend-config`、`/api/chat`、`/api/chat/stream`
+- `Gateway/Back`：模型配置、LLM 调用、流式输出、运行时参数读取（`.env`）
+- `Gateway/Front/react-ui`：React + Vite 前端，支持桌面、移动默认端、微信端三套壳层
+- `Deployer`：Ubuntu 部署脚本、systemd 模板、nginx 模板、健康检查
+- `Launcher`：本地联调与快捷启动脚本
+- `Memo`：版本记录、设计素材、发布说明
+
+## 当前功能
+
+- 多模型切换，前端从后端读取可用模型与默认模型
+- 聊天接口支持普通返回与 NDJSON 流式返回
+- 移动端 / 微信端输入法稳定性治理
+- 会话本地持久化与基础运行指标展示
+- 头像互动、欢迎态 / 聊天态双状态界面
+- `.env` 配置加载、Ubuntu 单机部署、GitHub Actions CI/CD
+
+## 界面参考
+
+![Hero](Memo/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFhero-page.jpg)
+
+![Chat](Memo/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFchat-page.jpg)
+
+## 目录速览
+
+```text
+.
+├─ Gateway/
+│  ├─ Back/              # LLM provider、settings、测试入口
+│  └─ Front/react-ui/    # React 前端
+├─ Deployer/             # Ubuntu 部署脚本与模板
+├─ Launcher/             # 本地启动脚本
+├─ Memo/                 # 版本与设计资料
+├─ orchestrator.py       # HTTP 编排入口
+└─ pyproject.toml        # Python 项目元数据
+```
+
+## 本地开发
+
+### Backend
+
+1. 在项目根创建 `.env`
+2. 填写 `ALIYUN_BAILIAN_API_KEY`
+3. 安装依赖并启动后端
+
+### Frontend
+
+在 `Gateway/Front/react-ui` 下安装依赖后运行：
+
+- `npm run dev`：本地开发
+- `npm run build`：构建 `dist`
+- `npm run preview`：预览构建结果
+
+## 部署
+
+推荐环境：Ubuntu 22.04 / 24.04，前端走 `8501`，后端走 `8766`，由 nginx 统一暴露 `80/443`。完整部署说明见 [Deployer/README.md](Deployer/README.md)。
+
+## 发布说明
+
+- 版本详情见 [Memo/release-8.0/release-8.0.md](Memo/release-8.0/release-8.0.md)
+- 当前发布目标：`main` + tag `V8.0`
