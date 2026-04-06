@@ -111,8 +111,8 @@ compute_bootstrap_state() {
     npm --version 2>/dev/null || true
     sha256sum requirements.txt 2>/dev/null || true
     sha256sum pyproject.toml 2>/dev/null || true
-    sha256sum Gateway/Front/react-ui/package.json 2>/dev/null || true
-    sha256sum Gateway/Front/react-ui/package-lock.json 2>/dev/null || true
+    sha256sum Front/react-ui/package.json 2>/dev/null || true
+    sha256sum Front/react-ui/package-lock.json 2>/dev/null || true
   ) | sha256sum | awk '{print $1}'
 }
 
@@ -122,8 +122,8 @@ should_run_bootstrap() {
 
   [[ "$FORCE_BOOTSTRAP" == "1" ]] && return 0
   [[ ! -x "$APP_DIR/.venv311/bin/python" ]] && return 0
-  [[ ! -d "$APP_DIR/Gateway/Front/react-ui/node_modules" ]] && return 0
-  [[ ! -d "$APP_DIR/Gateway/Front/react-ui/dist" ]] && return 0
+  [[ ! -d "$APP_DIR/Front/react-ui/node_modules" ]] && return 0
+  [[ ! -d "$APP_DIR/Front/react-ui/dist" ]] && return 0
   [[ ! -f "$state_file" ]] && return 0
 
   [[ "$(cat "$state_file" 2>/dev/null || true)" != "$current_state" ]]
@@ -260,7 +260,7 @@ if ! grep -Eq '^(ALIYUN_BAILIAN_API_KEY|DASHSCOPE_API_KEY)=' "$APP_DIR/.env"; th
 fi
 
 echo "[STEP] Build frontend dist"
-su - "$APP_USER" -c "cd '$APP_DIR/Gateway/Front/react-ui' && npm run build"
+su - "$APP_USER" -c "cd '$APP_DIR/Front/react-ui' && npm run build"
 
 echo "[STEP] Install systemd units"
 UNITS_CHANGED=0

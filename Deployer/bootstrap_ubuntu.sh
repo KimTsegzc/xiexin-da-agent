@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="$ROOT_DIR/.venv311"
-FRONTEND_DIR="$ROOT_DIR/Gateway/Front/react-ui"
+FRONTEND_DIR="$ROOT_DIR/Front/react-ui"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 USE_DEADSNAKES="${USE_DEADSNAKES:-0}"
 SKIP_APT="${SKIP_APT:-0}"

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRONTEND_DIR="$ROOT_DIR/Gateway/Front/react-ui"
+FRONTEND_DIR="$ROOT_DIR/Front/react-ui"
 
 pass() { printf '[PASS] %s\n' "$1"; }
 warn() { printf '[WARN] %s\n' "$1"; }
@@ -33,7 +33,7 @@ fi
 for path in \
   "$ROOT_DIR/orchestrator.py" \
   "$ROOT_DIR/pyproject.toml" \
-  "$ROOT_DIR/Gateway/Back/llm_provider.py" \
+  "$ROOT_DIR/Backend/llm_provider.py" \
   "$FRONTEND_DIR/package.json"
  do
   [[ -f "$path" ]] || fail "Required file missing: $path"

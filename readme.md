@@ -1,17 +1,18 @@
 # XIEXin DA Agent
 
-Version: 8.0.0
+Version: 9.0.0
 
 XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：后端提供流式 LLM 接口，前端提供桌面 / 移动 / 微信兼容聊天界面，部署链路基于 Ubuntu + systemd + nginx，并已接入基础 CI/CD。
 
 ## 当前主体架构
 
-- `orchestrator.py`：统一 HTTP 入口，提供 `/health`、`/api/frontend-config`、`/api/chat`、`/api/chat/stream`
-- `Gateway/Back`：模型配置、LLM 调用、流式输出、运行时参数读取（`.env`）
-- `Gateway/Front/react-ui`：React + Vite 前端，支持桌面、移动默认端、微信端三套壳层
+- `apps/api/server.py`：统一 HTTP 入口，提供 `/health`、`/api/frontend-config`、`/api/chat`、`/api/chat/stream`
+- `Backend`：模型配置、LLM 调用、流式输出、运行时参数读取（`.env`）
+- `Prompt`：Prompt 工程目录（`soul.md` 与欢迎语生成）
+- `Front/react-ui`：React + Vite 前端，支持桌面、移动默认端、微信端三套壳层
 - `Deployer`：Ubuntu 部署脚本、systemd 模板、nginx 模板、健康检查
 - `Launcher`：本地联调与快捷启动脚本
-- `Memo`：版本记录、设计素材、发布说明
+- `Docs`：版本记录、设计素材、发布说明与产品规划
 
 ## 当前功能
 
@@ -24,21 +25,22 @@ XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：
 
 ## 界面参考
 
-![Hero](Memo/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFhero-page.jpg)
+![Hero](Docs/release/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFhero-page.jpg)
 
-![Chat](Memo/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFchat-page.jpg)
+![Chat](Docs/release/release-8.0/%E6%89%8B%E6%9C%BA%E7%AB%AFchat-page.jpg)
 
 ## 目录速览
 
 ```text
 .
-├─ Gateway/
-│  ├─ Back/              # LLM provider、settings、测试入口
-│  └─ Front/react-ui/    # React 前端
+├─ Backend/              # LLM provider、settings、测试入口
+├─ Prompt/               # Prompt 工程（soul.md / welcome.py）
+├─ Front/react-ui/       # React 前端
 ├─ Deployer/             # Ubuntu 部署脚本与模板
 ├─ Launcher/             # 本地启动脚本
-├─ Memo/                 # 版本与设计资料
-├─ orchestrator.py       # HTTP 编排入口
+├─ Docs/                 # 版本、设计资料与 PRD
+├─ apps/api/server.py     # HTTP 编排入口（主路径）
+├─ orchestrator.py       # 兼容壳入口（保留旧启动链路）
 └─ pyproject.toml        # Python 项目元数据
 ```
 
@@ -52,7 +54,7 @@ XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：
 
 ### Frontend
 
-在 `Gateway/Front/react-ui` 下安装依赖后运行：
+在 `Front/react-ui` 下安装依赖后运行：
 
 - `npm run dev`：本地开发
 - `npm run build`：构建 `dist`
@@ -64,5 +66,5 @@ XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：
 
 ## 发布说明
 
-- 版本详情见 [Memo/release-8.0/release-8.0.md](Memo/release-8.0/release-8.0.md)
-- 当前发布目标：`main` + tag `V8.0`
+- 版本详情见 [Docs/release/release-9.0.md](Docs/release/release-9.0.md)
+- 当前发布目标：`main` + tag `V9.0`

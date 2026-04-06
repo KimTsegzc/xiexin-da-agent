@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xiexin-da-agent"
-version = "8.0.0"
+version = "9.0.0"
 requires-python = ">=3.10"
 dependencies = [
     "openai>=1.14,<2.0",
@@ -17,8 +17,14 @@ type = "virtual"
 path = ".venv311"  
 
 [tool.hatch.build.targets.wheel]
-packages = ["Gateway"]
+packages = ["Backend", "apps", "Prompt"]
 
 [tool.hatch.envs.default.scripts]
-back-llm-provider = "python -m Gateway.Back.llm_provider"
-back-ali-test = "python -m Gateway.Back.ali_test"
+back-llm-provider = "python -m Backend.llm_provider"
+back-ali-test = "python -m Backend.ali_test"
+
+[tool.xiexin]
+config_source = ".env and environment variables"
+config_file_removed = "config.json"
+backend_entry = "apps.api.server"
+frontend_dir = "Front/react-ui"

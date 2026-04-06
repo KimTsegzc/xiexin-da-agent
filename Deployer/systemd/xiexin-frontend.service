@@ -7,7 +7,7 @@ Requires=xiexin-backend.service
 [Service]
 Type=simple
 User=xiexin
-WorkingDirectory=/srv/xiexin-da-agent/Gateway/Front/react-ui
+WorkingDirectory=/srv/xiexin-da-agent/Front/react-ui
 Environment=NODE_ENV=production
 ExecStart=/usr/bin/npm run preview
 Restart=always

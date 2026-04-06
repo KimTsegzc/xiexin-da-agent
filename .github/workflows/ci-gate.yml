@@ -28,13 +28,13 @@ jobs:
 
       - name: Python compile check
         run: |
-          python -m compileall orchestrator.py Gateway
+          python -m compileall orchestrator.py Backend apps
 
       - name: Backend import smoke check
         run: |
           python - <<'PY'
-          from Gateway.Back.settings import get_settings
-          from Gateway.Back.llm_provider import get_model_list
+          from Backend.settings import get_settings
+          from Backend.llm_provider import get_model_list
 
           settings = get_settings()
           models = get_model_list()
@@ -48,21 +48,20 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: Gateway/Front/react-ui/package-lock.json
+          cache-dependency-path: Front/react-ui/package-lock.json
 
       - name: Install frontend deps
-        run: npm --prefix Gateway/Front/react-ui ci
+        run: npm --prefix Front/react-ui ci
 
       - name: Build frontend dist
-        run: npm --prefix Gateway/Front/react-ui run build
+        run: npm --prefix Front/react-ui run build
 
       - name: Basic secret gate
         shell: bash
         run: |
           set -euo pipefail
           if git grep -nE 'sk-[A-Za-z0-9]{20,}' -- \
-            ':!Gateway/Front/reference/**' \
-            ':!Memo/**'; then
+            ':!Docs/**'; then
             echo "::error::Potential secret detected in tracked files. Remove and rotate before merging."
             exit 1
           fi
