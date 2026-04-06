@@ -7,7 +7,7 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # 支持的模型列表 —— 维护在代码里，前端从 get_model_list() 读取；
 # 用户只需在 .env 中用 LLM_MODEL 指定当前选用的一个即可。
@@ -20,6 +20,7 @@ AVAILABLE_MODELS: list[str] = [
 ]
 
 _SOUL_FILE = REPO_ROOT / "Prompt" / "soul.md"
+_LEGACY_SOUL_FILE = REPO_ROOT / "soul.md"
 _DEFAULT_SOUL = ""
 
 
@@ -27,6 +28,9 @@ def load_system_prompt() -> str:
     """每次调用时重新读取 Prompt/soul.md，改完文件即时生效，无需重启。"""
     if _SOUL_FILE.exists():
         return _SOUL_FILE.read_text(encoding="utf-8").strip()
+    # Backward compatibility for old repo layout.
+    if _LEGACY_SOUL_FILE.exists():
+        return _LEGACY_SOUL_FILE.read_text(encoding="utf-8").strip()
     return _DEFAULT_SOUL
 
 
