@@ -317,8 +317,8 @@ textarea {
 }
 
 .info-modal {
-  width: min(70vw, calc(100vw - 28px));
-  height: min(70vh, calc(100vh - 28px));
+  width: min(80vw, calc(100vw - 28px));
+  height: min(80vh, calc(100vh - 28px));
   border: var(--line-width) solid var(--line);
   border-radius: 24px;
   background: #ffffff;
@@ -445,8 +445,8 @@ textarea {
 
 @media (orientation: landscape) {
   .info-modal {
-    width: min(80vw, calc(100vw - 32px));
-    height: min(80vh, calc(100vh - 32px));
+    width: min(90vw, calc(100vw - 32px));
+    height: min(90vh, calc(100vh - 32px));
   }
 }
 
@@ -1507,14 +1507,60 @@ textarea {
   }
 
   .info-modal {
-    padding: 18px 18px 16px;
+    padding: 16px 16px 14px;
     border-radius: 20px;
   }
 
+  .info-modal-head {
+    gap: 14px;
+  }
+
+  .info-modal-kicker {
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  .info-modal-title {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
   .info-modal-close {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 10px;
+  }
+
+  .info-modal-body {
+    margin-top: 14px;
+    gap: 8px;
+    padding-right: 8px;
+    margin-right: -8px;
+  }
+
+  .info-modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .info-meta-row,
+  .info-meta-block {
+    gap: 3px;
+  }
+
+  .info-meta-label {
+    font-size: 14px;
+  }
+
+  .info-meta-value {
+    font-size: 14px;
+    line-height: 1.52;
+  }
+
+  .info-feature-list {
+    padding-left: 16px;
+    gap: 3px;
+    font-size: 14px;
+    line-height: 1.52;
   }
 
   .app-shell.is-wechat .hero-avatar,
