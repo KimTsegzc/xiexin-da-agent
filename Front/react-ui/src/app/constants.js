@@ -9,7 +9,7 @@ export const MAX_PERSISTED_MESSAGES = 48;
 export const PROJECT_INFO = {
 	projectName: "谢鑫的智能体",
 	developer: "广分金科部",
-	version: "v9.2.0",
+	version: "V10",
 	features: [
 		"时间感知问候，避免早晚问候错位。",
 		"多轮上下文记忆，支持 recent turns 与增量 summary。",
