@@ -20,7 +20,6 @@ AVAILABLE_MODELS: list[str] = [
 ]
 
 _SOUL_FILE = REPO_ROOT / "Prompt" / "soul.md"
-_LEGACY_SOUL_FILE = REPO_ROOT / "soul.md"
 _DEFAULT_SOUL = ""
 
 
@@ -29,8 +28,6 @@ def load_system_prompt() -> str:
     if _SOUL_FILE.exists():
         return _SOUL_FILE.read_text(encoding="utf-8").strip()
     # Backward compatibility for old repo layout.
-    if _LEGACY_SOUL_FILE.exists():
-        return _LEGACY_SOUL_FILE.read_text(encoding="utf-8").strip()
     return _DEFAULT_SOUL
 
 
