@@ -915,7 +915,9 @@ textarea {
   .app-shell.is-wechat.welcome-mode,
   .app-shell.is-mobile-default.welcome-mode {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
     min-height: var(--app-height-stable);
     height: var(--app-height-stable);
     display: block;

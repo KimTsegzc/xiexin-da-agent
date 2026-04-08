@@ -50,7 +50,7 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
 
       if (welcomeLockActive) {
         const isDefaultMobileMode = clientMode === "default" && isMobileViewport;
-        const fallbackLockRatio = isDefaultMobileMode ? 0.37 : 0.41;
+        const fallbackLockRatio = isDefaultMobileMode ? 0.45 : 0.41;
         const fallbackLock = Math.round(nextStableHeight * fallbackLockRatio);
 
         root.style.setProperty(
