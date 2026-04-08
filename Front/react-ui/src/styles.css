@@ -47,7 +47,7 @@
   --welcome-mobile-title-size: clamp(19px, 5.7vw, 28px);
   --welcome-mobile-composer-width: min(920px, calc(var(--app-width) - 24px));
   --welcome-mobile-composer-height: 58px;
-  --wechat-welcome-lock-bottom: 35vh;
+  --wechat-welcome-lock-bottom: 31vh;
 }
 
 * {
@@ -1046,8 +1046,10 @@ textarea {
 
   .app-shell.is-wechat .hero-title,
   .app-shell.is-mobile-default .hero-title {
-    max-width: none;
+    max-width: min(100%, calc(var(--app-width-stable) - 40px));
     letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .app-shell.is-wechat .hero-title.is-multiline,
@@ -1062,7 +1064,7 @@ textarea {
     bottom: auto;
     width: 100%;
     margin: 0;
-    transform: translateY(-20px);
+    transform: translateY(24px);
     z-index: 6;
   }
 
