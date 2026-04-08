@@ -27,6 +27,7 @@ _ensure_repo_root_on_path_for_direct_run()
 from openai import OpenAI
 
 from Backend.llm_provider import get_model_list
+from Backend.search_provider import SearchProvider
 from Backend.runtime import get_runtime
 from Backend.runtime.contracts import AgentRequest
 from Backend.settings import get_settings
@@ -397,6 +398,34 @@ def _build_handler():
         def do_POST(self):
             parsed = urlparse(self.path)
             path = parsed.path
+            if path == "/api/search/chat":
+                try:
+                    payload = self._read_json_payload()
+                    result = SearchProvider.web_search(
+                        messages=payload.get("messages", []),
+                        user_input=payload.get("user_input"),
+                        web_top_k=payload.get("web_top_k"),
+                    )
+
+                    self._start_json_response()
+                    self._write_json_response(
+                        {
+                            "ok": True,
+                            "provider": "baidu-qianfan-web-search",
+                            "result": result,
+                        }
+                    )
+                except Exception as exc:
+                    self._start_json_response()
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "SEARCH_REQUEST_FAILED",
+                            "message": str(exc),
+                        }
+                    )
+                return
+
             if path == "/api/chat":
                 try:
                     payload = self._read_json_payload()

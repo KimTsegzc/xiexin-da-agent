@@ -2,10 +2,28 @@ from __future__ import annotations
 
 import threading
 import time
+import sys
+from pathlib import Path
 from typing import Iterator, Optional
 
 from openai import OpenAI
-from .settings import AVAILABLE_MODELS, Settings, get_settings, load_system_prompt
+
+
+def _ensure_repo_root_on_path_for_direct_run() -> None:
+    if __package__ not in (None, ""):
+        return
+    repo_root = Path(__file__).resolve().parents[1]
+    repo_root_str = str(repo_root)
+    if repo_root_str not in sys.path:
+        sys.path.insert(0, repo_root_str)
+
+
+_ensure_repo_root_on_path_for_direct_run()
+
+if __package__ in (None, ""):
+    from Backend.settings import AVAILABLE_MODELS, Settings, get_settings, load_system_prompt
+else:
+    from .settings import AVAILABLE_MODELS, Settings, get_settings, load_system_prompt
 
 
 def get_model_list() -> list[str]:
@@ -41,6 +59,16 @@ def _resolve_request_options(settings: Settings) -> dict:
     return options
 
 
+def _resolve_enable_search(settings: Settings, enable_search: Optional[bool] = None) -> bool:
+    if enable_search is None:
+        return bool(settings.llm_enable_search)
+    return bool(enable_search)
+
+
+def _build_extra_body(enable_search: bool) -> dict:
+    return {"enable_search": enable_search}
+
+
 def _extract_usage_metrics(completion) -> dict:
     usage = getattr(completion, "usage", None)
     return {
@@ -61,6 +89,7 @@ def LLM_stream(
     user_input: str,
     model: Optional[str] = None,
     smooth: bool = True,
+    enable_search: Optional[bool] = None,
 ) -> Iterator[dict]:
     """Stream model output as events for backend usage.
 
@@ -73,6 +102,7 @@ def LLM_stream(
     client = build_client(settings)
     model_name = _resolve_model(settings, model=model)
     request_options = _resolve_request_options(settings)
+    resolved_enable_search = _resolve_enable_search(settings, enable_search=enable_search)
 
     started = time.perf_counter()
     yield {"type": "pulse", "stage": "accepted", "elapsed_seconds": 0.0}
@@ -83,6 +113,7 @@ def LLM_stream(
         messages=_build_messages(settings, user_input),
         stream=True,
         stream_options={"include_usage": True},
+        extra_body=_build_extra_body(resolved_enable_search),
         **request_options,
     )
 
@@ -143,6 +174,7 @@ def LLM_stream(
     metrics = {
         "model": model_name,
         "base_url": settings.base_url,
+        "enable_search": resolved_enable_search,
         "request_options": request_options,
         "first_token_latency_seconds": first_token_latency_seconds,
         "latency_seconds": elapsed,
@@ -157,20 +189,25 @@ def LLM_stream(
 def LLM_with_metrics(
     user_input: str,
     model: Optional[str] = None,
+    enable_search: Optional[bool] = None,
 ) -> tuple[str, dict]:
     """Call LLM and return assistant content plus runtime metrics."""
     final_content = ""
     final_metrics = {}
-    for event in LLM_stream(user_input, model=model):
+    for event in LLM_stream(user_input, model=model, enable_search=enable_search):
         if event.get("type") == "done":
             final_content = event.get("content", "")
             final_metrics = event.get("metrics", {})
     return final_content, final_metrics
 
 
-def LLM(user_input: str, model: Optional[str] = None) -> str:
+def LLM(
+    user_input: str,
+    model: Optional[str] = None,
+    enable_search: Optional[bool] = None,
+) -> str:
     """Call LLM and return assistant content only."""
-    content, _ = LLM_with_metrics(user_input, model=model)
+    content, _ = LLM_with_metrics(user_input, model=model, enable_search=enable_search)
     return content
 
 
@@ -183,6 +220,7 @@ def _format_verbose_metrics(metrics: dict) -> str:
     )
     return (
         f"[VERBOSE] model={metrics.get('model')}\n"
+        f"[VERBOSE] enable_search={metrics.get('enable_search')}\n"
         f"[VERBOSE] first_token_latency={first_token_latency_text}\n"
         f"[VERBOSE] latency={metrics.get('latency_seconds', 0.0):.3f}s\n"
         f"[VERBOSE] usage prompt={metrics.get('prompt_tokens')} completion={metrics.get('completion_tokens')} total={metrics.get('total_tokens')}\n"
@@ -223,22 +261,34 @@ class LLMProvider:
         user_input: str,
         model: Optional[str] = None,
         smooth: bool = True,
+        enable_search: Optional[bool] = None,
     ) -> Iterator[dict]:
-        yield from LLM_stream(user_input=user_input, model=model, smooth=smooth)
+        yield from LLM_stream(
+            user_input=user_input,
+            model=model,
+            smooth=smooth,
+            enable_search=enable_search,
+        )
 
     @staticmethod
     def with_metrics(
         user_input: str,
         model: Optional[str] = None,
+        enable_search: Optional[bool] = None,
     ) -> tuple[str, dict]:
-        return LLM_with_metrics(user_input=user_input, model=model)
+        return LLM_with_metrics(
+            user_input=user_input,
+            model=model,
+            enable_search=enable_search,
+        )
 
     @staticmethod
     def text(
         user_input: str,
         model: Optional[str] = None,
+        enable_search: Optional[bool] = None,
     ) -> str:
-        return LLM(user_input=user_input, model=model)
+        return LLM(user_input=user_input, model=model, enable_search=enable_search)
 
 
 def main() -> None:

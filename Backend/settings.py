@@ -69,6 +69,32 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("LLM_MAX_TOKENS", "MAX_TOKENS"),
     )
+    llm_enable_search: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("LLM_ENABLE_SEARCH", "ENABLE_SEARCH"),
+    )
+    baidu_search_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "BAIDU_QIANFAN_API_KEY",
+            "QIANFAN_API_KEY",
+            "BAIDU_API_KEY",
+        ),
+    )
+    baidu_search_base_url: str = Field(
+        default="https://qianfan.baidubce.com",
+        validation_alias=AliasChoices(
+            "BAIDU_SEARCH_BASE_URL",
+            "QIANFAN_BASE_URL",
+        ),
+    )
+    baidu_search_timeout_seconds: float = Field(
+        default=30.0,
+        validation_alias=AliasChoices(
+            "BAIDU_SEARCH_TIMEOUT_SECONDS",
+            "QIANFAN_TIMEOUT_SECONDS",
+        ),
+    )
 
     model_config = SettingsConfigDict(
         env_file=str(REPO_ROOT / ".env"),
