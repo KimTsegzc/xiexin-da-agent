@@ -87,6 +87,7 @@ export default function App() {
   const statusText = useHeroTyping(heroWelcomeText, heroTypingSeed);
   const textareaRef = useRef(null);
   const threadRef = useRef(null);
+  const previousLoadingRef = useRef(false);
   const appLockActive = mobileLikeWechat;
   const welcomeLockActive = mobileLikeWechat && !chatMode;
   const allowWelcomeAutoFocus = !mobileLikeWechat;
@@ -105,6 +106,19 @@ export default function App() {
   function focusComposer() {
     textareaRef.current?.focus();
   }
+
+  useEffect(() => {
+    const completedReply = previousLoadingRef.current && !loading;
+    previousLoadingRef.current = loading;
+    if (!completedReply || !chatMode || isMobileViewport) {
+      return;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [loading, chatMode, isMobileViewport]);
 
   const settingsState = useSettingsState({
     chatMode,

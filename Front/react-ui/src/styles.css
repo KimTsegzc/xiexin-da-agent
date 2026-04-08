@@ -264,6 +264,117 @@ textarea {
   transform: translateY(6px);
 }
 
+.info-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.info-modal {
+  width: min(420px, calc(100vw - 28px));
+  border: var(--line-width) solid var(--line);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+  padding: 18px 18px 16px;
+}
+
+.info-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.info-modal-kicker {
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.info-modal-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.16;
+  font-weight: 700;
+}
+
+.info-modal-close {
+  width: 40px;
+  height: 40px;
+  border: var(--line-width) solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.info-modal-close span {
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: #111111;
+}
+
+.info-modal-close span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.info-modal-close span:nth-child(2) {
+  transform: rotate(-45deg);
+}
+
+.info-modal-body {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.info-meta-row,
+.info-meta-block {
+  display: grid;
+  gap: 6px;
+}
+
+.info-meta-label {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.info-meta-value {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.info-feature-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .settings-toggle.is-open span:nth-child(1) {
   transform: rotate(45deg);
 }
@@ -331,6 +442,31 @@ textarea {
   cursor: pointer;
   font-size: 14px;
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.settings-option-info {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.settings-option-info svg {
+  width: 18px;
+  height: 18px;
+  stroke: #111111;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  flex: 0 0 auto;
+}
+
+.settings-option-info-dot {
+  fill: #111111;
+  stroke: none;
 }
 
 .settings-option.is-selected {
@@ -652,6 +788,7 @@ textarea {
   left: 50%;
   bottom: var(--composer-bottom);
   width: min(1260px, calc(100vw - 32px));
+  max-width: calc(100vw - 12px);
   transform: translateX(-50%);
   z-index: 4;
   max-height: calc(var(--app-height) - 20px);
@@ -675,6 +812,8 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
   min-height: 68px;
   padding: 8px 2.1%;
   border-radius: 30px;
@@ -882,7 +1021,7 @@ textarea {
     --welcome-mobile-avatar-title-gap: clamp(10px, 3vw, 16px);
     --welcome-mobile-title-composer-gap: clamp(14px, 3.6vw, 22px);
     --welcome-mobile-title-size: clamp(16px, 4.2vw, 20px);
-    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - 20px));
+    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 32px));
     --welcome-mobile-composer-height: 58px;
   }
 
@@ -909,7 +1048,7 @@ textarea {
     --welcome-mobile-avatar-title-gap: clamp(12px, 3.2vw, 18px);
     --welcome-mobile-title-composer-gap: clamp(12px, 3vw, 18px);
     --welcome-mobile-title-size: clamp(24px, 6.3vw, 31px);
-    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - 24px));
+    --welcome-mobile-composer-width: min(940px, calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 34px));
   }
 
   .app-shell.is-wechat.welcome-mode,
@@ -931,8 +1070,8 @@ textarea {
     position: absolute;
     left: 50%;
     bottom: var(--wechat-welcome-lock-bottom);
-    width: min(var(--content-width), calc(var(--app-width-stable) - 20px));
-    max-width: calc(var(--app-width-stable) - 20px);
+    width: min(var(--content-width), calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 28px));
+    max-width: calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 28px);
     transform: translateX(-50%) translateY(var(--vv-offset-fix, 0px));
     overflow-x: clip;
     will-change: transform;
@@ -940,7 +1079,7 @@ textarea {
   }
 
   .app-shell.is-mobile-default.welcome-mode .welcome-stack-shell {
-    width: min(var(--content-width), calc(var(--app-width-stable) - 24px));
+    width: min(var(--content-width), calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 30px));
   }
 
   .topbar {
@@ -1248,6 +1387,7 @@ textarea {
     left: auto;
     bottom: auto;
     width: var(--welcome-mobile-composer-width);
+    max-width: calc(var(--app-width-stable) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 20px);
     margin-top: clamp(8px, 1.6vh, 12px);
     transform: none;
     z-index: 6;
@@ -1260,15 +1400,15 @@ textarea {
   .app-shell.is-wechat.welcome-mode .composer-box,
   .app-shell.is-mobile-default.welcome-mode .composer-box {
     min-height: 52px;
-    padding: 5px 1.5%;
-    gap: 6px;
+    padding: 5px 10px 5px 8px;
+    gap: 5px;
     border-radius: 22px;
   }
 
   .app-shell.is-wechat.welcome-mode .composer-model,
   .app-shell.is-mobile-default.welcome-mode .composer-model {
-    max-width: 106px;
-    padding: 5px 8px;
+    max-width: 96px;
+    padding: 5px 7px;
     font-size: var(--mobile-model-chat-size);
     letter-spacing: 0.02em;
   }
@@ -1290,7 +1430,33 @@ textarea {
   .app-shell.is-mobile-default.welcome-mode .send-button {
     width: 34px;
     height: 34px;
+    min-width: 34px;
     font-size: var(--mobile-send-welcome-size);
+  }
+
+  .info-modal-backdrop {
+    padding: 16px;
+  }
+
+  .info-modal {
+    width: min(360px, calc(100vw - 20px));
+    padding: 16px 16px 14px;
+    border-radius: 20px;
+  }
+
+  .info-modal-title {
+    font-size: 20px;
+  }
+
+  .info-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .info-feature-list {
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   .app-shell.is-wechat .hero-avatar,

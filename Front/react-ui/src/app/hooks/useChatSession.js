@@ -2,6 +2,39 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PERSISTED_MESSAGES, SESSION_STORAGE_KEY } from "../constants";
 import { isClientDebugEnabled, streamChatResponse } from "../utils/api";
 
+
+function shouldLogContextToConsole() {
+  if (isClientDebugEnabled()) return true;
+  const hostname = window.location.hostname || "";
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+
+function logContextMetrics(metrics) {
+  const context = metrics?.context;
+  if (!context || !shouldLogContextToConsole()) return;
+  console.groupCollapsed("[xiexin-context]");
+  console.log("summary", {
+    session_id: context.session_id,
+    recent: context.recent_message_count,
+    history: context.history_message_count,
+    summary: context.summary_applied,
+    updated: context.summary_updated,
+    period: context.time_period,
+  });
+  console.log("recent_preview", context.recent_preview || []);
+  console.log("summary_preview", context.summary_preview || "");
+  console.log("context", {
+    session_id: context.session_id,
+    recent: context.recent_message_count,
+    history: context.history_message_count,
+    summary: context.summary_applied,
+    updated: context.summary_updated,
+    period: context.time_period,
+  });
+  console.groupEnd();
+}
+
 function readPersistedSession() {
   try {
     const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
@@ -88,6 +121,7 @@ export function useChatSession({ apiBase, selectedModel }) {
 
           if (eventPayload.type === "done") {
             assistantText = eventPayload.content || assistantText;
+            logContextMetrics(eventPayload.metrics || null);
             setMessages((current) => current.map((message, index) => (
               index === assistantIndex
                 ? { ...message, content: assistantText, metrics: eventPayload.metrics || null }

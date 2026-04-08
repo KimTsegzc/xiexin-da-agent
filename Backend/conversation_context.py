@@ -35,6 +35,15 @@ def _log_context(stage: str, payload: dict[str, Any]) -> None:
     )
 
 
+def _preview_messages(messages: list[dict[str, str]], limit: int = 3) -> list[str]:
+    if not messages:
+        return []
+    return [
+        f"{item.get('role', 'unknown')}: {_preview_text(item.get('content', ''), 72)}"
+        for item in messages[-max(1, limit) :]
+    ]
+
+
 @dataclass(slots=True)
 class SummaryState:
     text: str = ""
@@ -59,7 +68,9 @@ class PreparedConversation:
             "request_time": self.request_time_text,
             "time_period": self.time_period_label,
             "recent_message_count": len(self.recent_messages),
+            "recent_preview": _preview_messages(self.recent_messages),
             "summary_applied": bool(self.summary.text),
+            "summary_preview": _preview_text(self.summary.text, 220),
             "summary_source_message_count": self.summary.source_message_count,
         }
 
