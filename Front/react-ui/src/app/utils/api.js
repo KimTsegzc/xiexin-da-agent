@@ -87,6 +87,7 @@ function parseEventLines(buffer, onEvent) {
 
 export async function streamChatResponse({ apiBase, userInput, model, onEvent }) {
   const debug = isDebugModeEnabled();
+  const welcomeSessionId = getOrCreateWelcomeSessionId();
   const response = await fetch(withClientDebugQuery(`${apiBase}${STREAM_PATH}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -94,6 +95,7 @@ export async function streamChatResponse({ apiBase, userInput, model, onEvent })
       user_input: userInput,
       smooth: true,
       model: model || undefined,
+      session_id: welcomeSessionId || undefined,
       debug,
     }),
   });

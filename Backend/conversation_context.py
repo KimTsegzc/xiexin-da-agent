@@ -21,6 +21,20 @@ _MEMORY_LOCK = threading.Lock()
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
+def _preview_text(text: str, limit: int = 160) -> str:
+    compact = " ".join((text or "").split())
+    if len(compact) <= limit:
+        return compact
+    return compact[: max(0, limit - 3)] + "..."
+
+
+def _log_context(stage: str, payload: dict[str, Any]) -> None:
+    print(
+        f"[context] {stage}: {json.dumps(payload, ensure_ascii=False)}",
+        flush=True,
+    )
+
+
 @dataclass(slots=True)
 class SummaryState:
     text: str = ""
@@ -171,6 +185,18 @@ def prepare_conversation(
         )
     messages.extend(recent_messages)
     messages.append({"role": "user", "content": user_input})
+    _log_context(
+        "prepared",
+        {
+            "session_id": resolved_session_id,
+            "request_time": request_time_text,
+            "time_period": time_period_label,
+            "recent_message_count": len(recent_messages),
+            "summary_applied": bool(summary.text),
+            "summary_preview": _preview_text(summary.text),
+            "latest_user_preview": _preview_text(user_input),
+        },
+    )
     return PreparedConversation(
         session_id=resolved_session_id,
         request_started_at=resolved_request_time,
@@ -256,10 +282,28 @@ def finalize_conversation(
 ) -> dict[str, Any]:
     resolved_settings = settings or get_settings()
     if not prepared.session_id:
+        _log_context(
+            "finalized",
+            {
+                "session_id": None,
+                "persisted": False,
+                "summary_updated": False,
+                "reason": "missing_session_id",
+            },
+        )
         return {"persisted": False, "summary_updated": False, "reason": "missing_session_id"}
 
     normalized_assistant = (assistant_output or "").strip()
     if not normalized_assistant:
+        _log_context(
+            "finalized",
+            {
+                "session_id": prepared.session_id,
+                "persisted": False,
+                "summary_updated": False,
+                "reason": "empty_assistant_output",
+            },
+        )
         return {"persisted": False, "summary_updated": False, "reason": "empty_assistant_output"}
 
     new_messages = [
@@ -306,10 +350,23 @@ def finalize_conversation(
             except Exception as exc:
                 summary_error = str(exc)
 
-    return {
+    result = {
         "persisted": True,
         "summary_updated": summary_updated,
         "summary_model": resolved_settings.summary_model if summary_updated else None,
         "history_message_count": len(history),
         "summary_error": summary_error,
     }
+    _log_context(
+        "finalized",
+        {
+            "session_id": prepared.session_id,
+            "persisted": result["persisted"],
+            "summary_updated": result["summary_updated"],
+            "summary_model": result["summary_model"],
+            "history_message_count": result["history_message_count"],
+            "summary_error": result["summary_error"],
+            "assistant_preview": _preview_text(normalized_assistant),
+        },
+    )
+    return result
