@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - xiexin-vite-proto
+      - agent-dev-*
   workflow_dispatch:
 
 jobs:
@@ -18,18 +19,24 @@ jobs:
 
       - name: Deploy to Tencent Cloud
         uses: appleboy/ssh-action@master
+        env:
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
         with:
           host: 81.71.25.120
           username: root
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: SOURCE_REF,SOURCE_SHA
           script: |
             set -euo pipefail
             echo "[INFO] Starting deployment..."
+            echo "[INFO] Deploying ref: ${SOURCE_REF}"
+            echo "[INFO] Deploying sha: ${SOURCE_SHA}"
 
             APP_DIR="/srv/xiexin-da-agent"
-            ARCHIVE_URL="https://cors.isteed.cc/https://github.com/KimTsegzc/xiexin-da-agent/archive/refs/heads/main.zip"
-            ARCHIVE_ZIP="/tmp/xiexin-da-agent-main.zip"
-            ARCHIVE_DIR="/tmp/xiexin-da-agent-main"
+            ARCHIVE_URL="https://cors.isteed.cc/https://codeload.github.com/KimTsegzc/xiexin-da-agent/zip/${SOURCE_SHA}"
+            ARCHIVE_ZIP="/tmp/xiexin-da-agent-${SOURCE_SHA}.zip"
+            ARCHIVE_DIR="/tmp/xiexin-da-agent-${SOURCE_SHA}"
             ENV_BACKUP="/tmp/xiexin-da-agent.env.bak"
 
             apt-get -o Acquire::ForceIPv4=true update
@@ -43,8 +50,14 @@ jobs:
             wget -O "$ARCHIVE_ZIP" "$ARCHIVE_URL"
             unzip -q "$ARCHIVE_ZIP" -d /tmp
 
+            EXTRACTED_DIR="$(find /tmp -maxdepth 1 -type d -name "xiexin-da-agent-*" | grep "${SOURCE_SHA}" | head -n 1 || true)"
+            if [[ -z "$EXTRACTED_DIR" ]]; then
+              echo "[FAIL] Unable to locate extracted archive directory for ${SOURCE_SHA}"
+              exit 1
+            fi
+
             rm -rf "$APP_DIR"
-            mv "$ARCHIVE_DIR" "$APP_DIR"
+            mv "$EXTRACTED_DIR" "$APP_DIR"
 
             id -u xiexin >/dev/null 2>&1 || adduser --disabled-password --gecos "" xiexin
 
