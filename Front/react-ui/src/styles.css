@@ -933,8 +933,9 @@ textarea {
     bottom: var(--wechat-welcome-lock-bottom);
     width: min(var(--content-width), calc(var(--app-width-stable) - 20px));
     max-width: calc(var(--app-width-stable) - 20px);
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(var(--vv-offset-fix, 0px));
     overflow-x: clip;
+    will-change: transform;
     z-index: 6;
   }
 

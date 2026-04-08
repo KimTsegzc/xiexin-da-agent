@@ -120,6 +120,54 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
       scheduleSyncViewportMetrics();
     }
 
+    /* ── Welcome-mode scroll compensation ──
+     * iOS WKWebView (WeChat iOS) and XWeb (WeChat Android) pan the
+     * visualViewport when the keyboard opens to keep the focused input
+     * visible.  This shifts position:fixed elements.  We counter that
+     * shift by applying an inverse translateY via a CSS variable so the
+     * hero section stays rock-still.
+     */
+    const welcomeScrollTimers = [];
+
+    function compensateViewportScroll() {
+      const vvTop = Math.round(window.visualViewport?.offsetTop || 0);
+      if (vvTop !== 0) {
+        root.style.setProperty("--vv-offset-fix", `${-vvTop}px`);
+      } else {
+        root.style.setProperty("--vv-offset-fix", "0px");
+      }
+    }
+
+    function handleWelcomeVisualViewportScroll() {
+      compensateViewportScroll();
+    }
+
+    function handleWelcomeFocusIn(event) {
+      if (!isEditableTarget(event.target)) return;
+      compensateViewportScroll();
+      const delays = [50, 100, 150, 200, 300, 400, 500];
+      for (const d of delays) {
+        welcomeScrollTimers.push(window.setTimeout(compensateViewportScroll, d));
+      }
+    }
+
+    function handleWelcomeFocusOut(event) {
+      if (!isEditableTarget(event.target)) return;
+      compensateViewportScroll();
+      welcomeScrollTimers.push(
+        window.setTimeout(compensateViewportScroll, 100),
+        window.setTimeout(compensateViewportScroll, 300),
+      );
+    }
+
+    if (welcomeLockActive) {
+      root.style.setProperty("--vv-offset-fix", "0px");
+      window.visualViewport?.addEventListener("scroll", handleWelcomeVisualViewportScroll);
+      window.visualViewport?.addEventListener("resize", handleWelcomeVisualViewportScroll);
+      document.addEventListener("focusin", handleWelcomeFocusIn, true);
+      document.addEventListener("focusout", handleWelcomeFocusOut, true);
+    }
+
     writeViewportMetrics();
     window.addEventListener("resize", handleViewportEvent);
     window.addEventListener("orientationchange", handleOrientationChange);
@@ -136,6 +184,14 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
       }
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
+      }
+      for (const t of welcomeScrollTimers) window.clearTimeout(t);
+      if (welcomeLockActive) {
+        window.visualViewport?.removeEventListener("scroll", handleWelcomeVisualViewportScroll);
+        window.visualViewport?.removeEventListener("resize", handleWelcomeVisualViewportScroll);
+        document.removeEventListener("focusin", handleWelcomeFocusIn, true);
+        document.removeEventListener("focusout", handleWelcomeFocusOut, true);
+        root.style.removeProperty("--vv-offset-fix");
       }
       window.removeEventListener("resize", handleViewportEvent);
       window.removeEventListener("orientationchange", handleOrientationChange);
