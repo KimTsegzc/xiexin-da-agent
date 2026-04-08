@@ -44,7 +44,7 @@
   --welcome-mobile-row-gap: clamp(14px, 2.6vh, 22px);
   --welcome-mobile-avatar-title-gap: var(--welcome-mobile-row-gap);
   --welcome-mobile-title-composer-gap: var(--welcome-mobile-row-gap);
-  --welcome-mobile-title-size: clamp(21px, 6.1vw, 30px);
+  --welcome-mobile-title-size: clamp(19px, 5.7vw, 28px);
   --welcome-mobile-composer-width: min(920px, calc(var(--app-width) - 24px));
   --welcome-mobile-composer-height: 58px;
   --wechat-welcome-lock-bottom: 41vh;
@@ -367,10 +367,12 @@ textarea {
   margin: 0;
   justify-content: flex-start;
   gap: var(--welcome-stack-gap);
+  min-height: clamp(240px, 34vh, 320px);
   transform: translateY(calc(var(--welcome-stack-shift) - 24px));
 }
 
 .hero-avatar {
+  flex: 0 0 auto;
   width: clamp(110px, 13vw, 150px);
   height: clamp(110px, 13vw, 150px);
   border-radius: 50%;
@@ -381,11 +383,13 @@ textarea {
   flex-direction: column;
   gap: 0;
   align-items: center;
+  justify-content: center;
+  min-height: calc(2 * 1.3em + 8px);
 }
 
 .hero-title {
   margin: 0;
-  font-size: clamp(24px, 3.15vw, 44px);
+  font-size: clamp(22px, 2.95vw, 42px);
   line-height: 1.08;
   font-weight: 700;
   max-width: 920px;
@@ -399,6 +403,7 @@ textarea {
 
 .hero-title.is-multiline {
   white-space: normal;
+  line-height: 1.3;
 }
 
 .hero-title.is-multiline .hero-title-line {

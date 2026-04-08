@@ -4,11 +4,14 @@ import { InteractiveAvatar } from "./InteractiveAvatar";
 function splitWelcomeTitle(text) {
   const value = String(text || "").trim();
   const characters = Array.from(value);
-  if (characters.length <= 10) {
+  if (characters.length <= 16) {
     return { multiline: false, lines: [value] };
   }
 
-  const commaIndex = value.search(/[，,]/);
+  const commaMatches = Array.from(value.matchAll(/[，,]/g));
+  const commaIndex = commaMatches.length
+    ? commaMatches[commaMatches.length - 1].index ?? -1
+    : -1;
   if (commaIndex >= 0) {
     const firstLine = value.slice(0, commaIndex).trim();
     const secondLine = value.slice(commaIndex + 1).trim();
