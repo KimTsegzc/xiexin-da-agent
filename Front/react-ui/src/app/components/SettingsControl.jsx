@@ -35,6 +35,20 @@ export function SettingsControl({
 
   return (
     <div className="topbar-actions" ref={anchorRef}>
+      {popoverOpen ? (
+        <button
+          type="button"
+          className={`info-toggle ${newChatPlacement === "below" ? "is-below" : "is-above"} ${showNewChat ? "is-stacked" : ""}`}
+          onClick={() => setInfoOpen(true)}
+          aria-label="查看项目信息"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 10v6" />
+            <circle cx="12" cy="7.2" r="1" className="info-dot" />
+          </svg>
+        </button>
+      ) : null}
       {popoverOpen && showNewChat ? (
         <button
           type="button"
@@ -88,21 +102,6 @@ export function SettingsControl({
                 {model}
               </button>
             ))}
-          </div>
-        </div>
-      ) : null}
-      {infoOpen ? (
-        <div className="info-modal-backdrop" role="presentation" onClick={() => setInfoOpen(false)}>
-          <section
-            className="info-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="项目信息"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="info-modal-head">
-              <div>
-                <div className="info-modal-kicker">INFO</div>
                 <h2 className="info-modal-title">{PROJECT_INFO.projectName}</h2>
               </div>
               <button

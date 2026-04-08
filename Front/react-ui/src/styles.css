@@ -187,6 +187,7 @@ textarea {
 }
 
 .settings-toggle,
+.info-toggle,
 .newchat-toggle {
   width: var(--settings-toggle-size);
   height: var(--settings-toggle-size);
@@ -210,8 +211,17 @@ textarea {
   z-index: 27;
 }
 
+.info-toggle {
+  position: absolute;
+  left: 0;
+  padding: 0;
+  z-index: 26;
+}
+
 .app-shell.is-wechat .newchat-toggle,
-.app-shell.is-mobile-default .newchat-toggle {
+.app-shell.is-mobile-default .newchat-toggle,
+.app-shell.is-wechat .info-toggle,
+.app-shell.is-mobile-default .info-toggle {
   border-radius: calc(var(--settings-toggle-radius) - 1px);
 }
 
@@ -223,6 +233,22 @@ textarea {
   top: calc(100% + 8px);
 }
 
+.info-toggle.is-above {
+  bottom: calc(100% + 8px);
+}
+
+.info-toggle.is-below {
+  top: calc(100% + 8px);
+}
+
+.info-toggle.is-stacked.is-above {
+  bottom: calc(200% + 16px);
+}
+
+.info-toggle.is-stacked.is-below {
+  top: calc(200% + 16px);
+}
+
 .newchat-toggle svg {
   width: 24px;
   height: 24px;
@@ -231,6 +257,21 @@ textarea {
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
+}
+
+.info-toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke: #111111;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.info-toggle .info-dot {
+  fill: #111111;
+  stroke: none;
 }
 
 .app-shell.is-wechat .newchat-toggle.is-above,
@@ -442,31 +483,6 @@ textarea {
   cursor: pointer;
   font-size: 14px;
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.settings-option-info {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.settings-option-info svg {
-  width: 18px;
-  height: 18px;
-  stroke: #111111;
-  stroke-width: 2.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-  flex: 0 0 auto;
-}
-
-.settings-option-info-dot {
-  fill: #111111;
-  stroke: none;
 }
 
 .settings-option.is-selected {
