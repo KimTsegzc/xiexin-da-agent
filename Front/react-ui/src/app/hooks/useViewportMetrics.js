@@ -42,11 +42,11 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
 
       stableViewportHeightRef.current = nextStableHeight;
       stableViewportWidthRef.current = nextStableWidth;
-      root.style.setProperty("--app-height", `${viewportHeight}px`);
+      root.style.setProperty("--app-height", welcomeLockActive ? `${nextStableHeight}px` : `${viewportHeight}px`);
       root.style.setProperty("--app-height-stable", `${nextStableHeight}px`);
       root.style.setProperty("--app-width", `${viewportWidth}px`);
       root.style.setProperty("--app-width-stable", `${nextStableWidth}px`);
-      root.style.setProperty("--keyboard-offset", `${keyboardOffset}px`);
+      root.style.setProperty("--keyboard-offset", welcomeLockActive ? "0px" : `${keyboardOffset}px`);
 
       if (welcomeLockActive) {
         const isDefaultMobileMode = clientMode === "default" && isMobileViewport;

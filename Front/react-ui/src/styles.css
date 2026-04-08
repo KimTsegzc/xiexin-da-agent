@@ -1241,23 +1241,17 @@ textarea {
 
   .app-shell.is-wechat.welcome-mode .composer-shell,
   .app-shell.is-mobile-default.welcome-mode .composer-shell {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: max(
-      calc(var(--wechat-welcome-lock-bottom) - var(--welcome-mobile-composer-height) - 12px),
-      calc(var(--keyboard-offset) + var(--composer-bottom))
-    );
-    width: auto;
-    margin-top: 0;
+    position: static;
+    left: auto;
+    bottom: auto;
+    width: var(--welcome-mobile-composer-width);
+    margin-top: clamp(8px, 1.6vh, 12px);
     transform: none;
-    transition: none;
-    z-index: 7;
+    z-index: 6;
   }
 
   .app-shell.is-mobile-default.welcome-mode .composer-shell {
-    left: 12px;
-    right: 12px;
+    margin-top: clamp(6px, 1.2vh, 10px);
   }
 
   .app-shell.is-wechat.welcome-mode .composer-box,
