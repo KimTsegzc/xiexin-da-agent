@@ -450,6 +450,13 @@ textarea {
   }
 }
 
+@media (orientation: landscape) and (min-width: 901px) {
+  .info-modal {
+    width: min(50vw, calc(100vw - 48px));
+    height: min(80vh, calc(100vh - 40px));
+  }
+}
+
 .settings-toggle.is-open span:nth-child(1) {
   transform: rotate(45deg);
 }
