@@ -93,7 +93,7 @@ export default function App() {
 
   useViewportMetrics({ clientMode, isMobileViewport, welcomeLockActive });
   useDocumentFlags({ clientMode, appLockActive, welcomeLockActive });
-  useAppScrollLock(appLockActive);
+  useAppScrollLock(appLockActive && !welcomeLockActive);
   useTextareaAutoSize(textareaRef, input);
   useThreadAutoScroll(threadRef, [messages, loading]);
   useDismissKeyboardOnThreadScroll({

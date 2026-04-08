@@ -34,20 +34,24 @@ export function WelcomeShell({ statusText, composerProps }) {
 
   return (
     <div className="welcome-stack-shell">
-      <section className="hero-panel">
-        <InteractiveAvatar className="hero-avatar" alt="鑫哥头像" />
-        <div className={`hero-copy${title.multiline ? " is-multiline" : " is-singleline"}`}>
-          <h1 className={`hero-title${title.multiline ? " is-multiline" : " is-singleline"}`}>
-            {title.lines.map((line, index) => (
-              <span key={`${line}-${index}`} className="hero-title-line">
-                {line}
-              </span>
-            ))}
-          </h1>
-        </div>
-      </section>
+      <div className="welcome-hero-shell">
+        <section className="hero-panel">
+          <InteractiveAvatar className="hero-avatar" alt="鑫哥头像" />
+          <div className={`hero-copy${title.multiline ? " is-multiline" : " is-singleline"}`}>
+            <h1 className={`hero-title${title.multiline ? " is-multiline" : " is-singleline"}`}>
+              {title.lines.map((line, index) => (
+                <span key={`${line}-${index}`} className="hero-title-line">
+                  {line}
+                </span>
+              ))}
+            </h1>
+          </div>
+        </section>
+      </div>
 
-      <Composer {...composerProps} />
+      <div className="welcome-composer-shell">
+        <Composer {...composerProps} />
+      </div>
     </div>
   );
 }

@@ -364,10 +364,25 @@ textarea {
   align-items: center;
 }
 
+.welcome-hero-shell,
+.welcome-composer-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .welcome-mode .welcome-stack-shell {
   display: grid;
   justify-items: center;
   grid-template-rows: clamp(240px, 34vh, 320px) auto;
+}
+
+.welcome-mode .welcome-hero-shell {
+  grid-row: 1;
+}
+
+.welcome-mode .welcome-composer-shell {
+  grid-row: 2;
 }
 
 .welcome-mode .hero-panel {
@@ -933,14 +948,30 @@ textarea {
     bottom: var(--wechat-welcome-lock-bottom);
     width: min(var(--content-width), calc(var(--app-width-stable) - 20px));
     max-width: calc(var(--app-width-stable) - 20px);
-    transform: translateX(-50%) translateY(var(--vv-offset-fix, 0px));
+    transform: translateX(-50%);
     overflow-x: clip;
-    will-change: transform;
     z-index: 6;
   }
 
   .app-shell.is-mobile-default.welcome-mode .welcome-stack-shell {
     width: min(var(--content-width), calc(var(--app-width-stable) - 24px));
+  }
+
+  .app-shell.is-wechat.welcome-mode .welcome-hero-shell,
+  .app-shell.is-mobile-default.welcome-mode .welcome-hero-shell {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 6;
+  }
+
+  .app-shell.is-wechat.welcome-mode .welcome-hero-shell {
+    transform: translateY(calc(24px + var(--vv-offset-fix, 0px)));
+    will-change: transform;
+  }
+
+  .app-shell.is-mobile-default.welcome-mode .welcome-hero-shell {
+    transform: translateY(24px);
   }
 
   .topbar {
@@ -1080,7 +1111,7 @@ textarea {
     bottom: auto;
     width: 100%;
     margin: 0;
-    transform: translateY(24px);
+    transform: none;
     z-index: 6;
   }
 
@@ -1235,11 +1266,15 @@ textarea {
   }
 
   .welcome-mode .composer-shell {
-    grid-row: 3;
     align-self: start;
     width: var(--welcome-mobile-composer-width);
     margin-top: var(--welcome-mobile-title-composer-gap);
     transform: none;
+  }
+
+  .welcome-mode .welcome-composer-shell {
+    grid-row: 3;
+    align-self: start;
   }
 
   .app-shell.is-wechat.welcome-mode .composer-shell,

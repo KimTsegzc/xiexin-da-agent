@@ -15,6 +15,7 @@ function shouldUseViewportFreezeWindow() {
 export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockActive }) {
   const stableViewportHeightRef = useRef(0);
   const stableViewportWidthRef = useRef(0);
+  const lastWelcomeOffsetFixRef = useRef("0px");
   const frameRef = useRef(0);
   const timerRef = useRef(0);
   const freezeUntilRef = useRef(0);
@@ -23,6 +24,7 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
   useEffect(() => {
     const root = document.documentElement;
     const isMobileLikeWechat = clientMode === "wechat" || (clientMode === "default" && isMobileViewport);
+    const shouldCompensateWelcomeViewport = welcomeLockActive && clientMode === "wechat";
     const shouldTrackViewportScroll = !welcomeLockActive && !isMobileLikeWechat;
     shouldFreezeRef.current = isMobileLikeWechat || shouldUseViewportFreezeWindow();
 
@@ -131,11 +133,12 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
 
     function compensateViewportScroll() {
       const vvTop = Math.round(window.visualViewport?.offsetTop || 0);
-      if (vvTop !== 0) {
-        root.style.setProperty("--vv-offset-fix", `${-vvTop}px`);
-      } else {
-        root.style.setProperty("--vv-offset-fix", "0px");
+      const nextOffsetFix = vvTop !== 0 ? `${-vvTop}px` : "0px";
+      if (lastWelcomeOffsetFixRef.current === nextOffsetFix) {
+        return;
       }
+      lastWelcomeOffsetFixRef.current = nextOffsetFix;
+      root.style.setProperty("--vv-offset-fix", nextOffsetFix);
     }
 
     function handleWelcomeVisualViewportScroll() {
@@ -160,7 +163,8 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
       );
     }
 
-    if (welcomeLockActive) {
+    if (shouldCompensateWelcomeViewport) {
+      lastWelcomeOffsetFixRef.current = "0px";
       root.style.setProperty("--vv-offset-fix", "0px");
       window.visualViewport?.addEventListener("scroll", handleWelcomeVisualViewportScroll);
       window.visualViewport?.addEventListener("resize", handleWelcomeVisualViewportScroll);
@@ -186,11 +190,12 @@ export function useViewportMetrics({ clientMode, isMobileViewport, welcomeLockAc
         window.clearTimeout(timerRef.current);
       }
       for (const t of welcomeScrollTimers) window.clearTimeout(t);
-      if (welcomeLockActive) {
+      if (shouldCompensateWelcomeViewport) {
         window.visualViewport?.removeEventListener("scroll", handleWelcomeVisualViewportScroll);
         window.visualViewport?.removeEventListener("resize", handleWelcomeVisualViewportScroll);
         document.removeEventListener("focusin", handleWelcomeFocusIn, true);
         document.removeEventListener("focusout", handleWelcomeFocusOut, true);
+        lastWelcomeOffsetFixRef.current = "0px";
         root.style.removeProperty("--vv-offset-fix");
       }
       window.removeEventListener("resize", handleViewportEvent);
