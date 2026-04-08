@@ -44,7 +44,7 @@
   --welcome-mobile-row-gap: clamp(14px, 2.6vh, 22px);
   --welcome-mobile-avatar-title-gap: var(--welcome-mobile-row-gap);
   --welcome-mobile-title-composer-gap: var(--welcome-mobile-row-gap);
-  --welcome-mobile-title-size: clamp(23px, 6.6vw, 32px);
+  --welcome-mobile-title-size: clamp(21px, 6.1vw, 30px);
   --welcome-mobile-composer-width: min(920px, calc(var(--app-width) - 24px));
   --welcome-mobile-composer-height: 58px;
   --wechat-welcome-lock-bottom: 41vh;
@@ -385,7 +385,7 @@ textarea {
 
 .hero-title {
   margin: 0;
-  font-size: clamp(28px, 3.55vw, 48px);
+  font-size: clamp(24px, 3.15vw, 44px);
   line-height: 1.08;
   font-weight: 700;
   max-width: 920px;

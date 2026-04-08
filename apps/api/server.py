@@ -6,7 +6,6 @@ import json
 import os
 import sys
 import threading
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Iterator, Optional
@@ -23,9 +22,6 @@ def _ensure_repo_root_on_path_for_direct_run() -> None:
 
 
 _ensure_repo_root_on_path_for_direct_run()
-
-from openai import OpenAI
-
 from Backend.llm_provider import get_model_list
 from Backend.search_provider import SearchProvider
 from Backend.runtime import get_runtime
@@ -151,107 +147,22 @@ def _generate_hero_welcome_text(
     debug_enabled: bool = False,
     session_id: str,
 ) -> tuple[str, dict | None]:
-    settings = get_settings()
     default_welcome = welcome_assets.get_default_welcome()
-    config = welcome_assets.get_welcome_generation_config(
-        wlcm_gen_prompt=wlcm_gen_prompt,
+    selected_text, selection_debug = welcome_assets.pick_welcome_text(
         session_id=session_id,
+        fallback_text=wlcm_gen_prompt,
     )
-    system_prompt = str(config.get("system_prompt", "")).strip()
-    first_token_timeout_seconds = float(config["first_token_timeout_seconds"])
-
-    debug_payload = (
-        {
-            "enabled": True,
-            "request": {
-                "model": str(config["model"]),
-                "temperature": float(config["temperature"]),
-                "max_tokens": int(config["max_tokens"]),
-                "timeout": first_token_timeout_seconds,
-                "sessionId": session_id,
-                "messages": [],
-                "ab": config.get("ab", {}),
-                "shortTermMemory": config.get("short_term_memory", []),
-            },
-            "response": {
-                "rawText": "",
-                "normalizedText": default_welcome,
-                "chunks": [],
-                "firstTokenLatencySeconds": None,
-            },
-            "error": None,
-        }
-        if debug_enabled
-        else None
-    )
-
-    if not system_prompt or not settings.api_key:
-        if debug_payload is not None:
-            debug_payload["error"] = "missing prompt or api_key"
-        return default_welcome, debug_payload
-
-    try:
-        client = OpenAI(api_key=settings.api_key, base_url=settings.base_url)
-        deadline = time.monotonic() + first_token_timeout_seconds
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {"role": "user", "content": welcome_assets.get_welcome_user_prompt()},
-        ]
-        if debug_payload is not None:
-            debug_payload["request"]["messages"] = messages
-
-        stream = client.chat.completions.create(
-            model=str(config["model"]),
-            messages=messages,
-            temperature=float(config["temperature"]),
-            max_tokens=int(config["max_tokens"]),
-            stream=True,
-            timeout=first_token_timeout_seconds,
-        )
-
-        parts: list[str] = []
-        first_token_received = False
-        first_token_latency: float | None = None
-        started = time.monotonic()
-        for chunk in stream:
-            if not first_token_received and time.monotonic() > deadline:
-                if debug_payload is not None:
-                    debug_payload["error"] = "first token timeout"
-                return default_welcome, debug_payload
-
-            if not chunk.choices:
-                continue
-
-            delta_text = chunk.choices[0].delta.content or ""
-            if delta_text:
-                first_token_received = True
-                if first_token_latency is None:
-                    first_token_latency = round(time.monotonic() - started, 4)
-                parts.append(delta_text)
-                if debug_payload is not None:
-                    debug_payload["response"]["chunks"].append(delta_text)
-
-        raw_text = "".join(parts)
-        normalized_text = welcome_assets.normalize_welcome_text(raw_text)
-        if normalized_text and normalized_text != default_welcome:
-            updated_memory = welcome_assets.record_welcome_word(
-                session_id=session_id,
-                text=normalized_text,
-            )
-            if debug_payload is not None:
-                debug_payload["response"]["updatedShortTermMemory"] = updated_memory
-        if debug_payload is not None:
-            debug_payload["response"]["rawText"] = raw_text
-            debug_payload["response"]["normalizedText"] = normalized_text
-            debug_payload["response"]["firstTokenLatencySeconds"] = first_token_latency
-        return normalized_text, debug_payload
-    except Exception:
-        if debug_payload is not None:
-            debug_payload["error"] = "welcome generation failed"
-        return default_welcome, debug_payload
+    if not debug_enabled:
+        return selected_text, None
+    return selected_text, {
+        "enabled": True,
+        "request": {
+            "sessionId": session_id,
+            "mode": "local-sayings-random",
+        },
+        "response": selection_debug,
+        "error": None,
+    }
 
 
 def _normalize_bind_host(host: str) -> str:
@@ -322,6 +233,8 @@ def ask_with_metrics(
 
 def _build_handler():
     class OrchestratorHandler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def _send_cors_headers(self) -> None:
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -332,16 +245,18 @@ def _build_handler():
             raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
             return json.loads(raw_body.decode("utf-8") or "{}")
 
-        def _start_json_response(self, status_code: int = 200) -> None:
+        def _write_json_response(self, payload: dict, status_code: int = 200) -> None:
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status_code)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-
-        def _write_json_response(self, payload: dict) -> None:
-            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+            self.wfile.write(body)
             self.wfile.flush()
+            self.close_connection = True
 
         def _start_stream_response(self, status_code: int = 200) -> None:
             self.send_response(status_code)
@@ -349,6 +264,7 @@ def _build_handler():
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("X-Accel-Buffering", "no")
+            self.send_header("Connection", "close")
             self.end_headers()
 
         def _write_ndjson_event(self, payload: dict) -> None:
@@ -359,7 +275,10 @@ def _build_handler():
         def do_OPTIONS(self):
             self.send_response(204)
             self._send_cors_headers()
+            self.send_header("Content-Length", "0")
+            self.send_header("Connection", "close")
             self.end_headers()
+            self.close_connection = True
 
         def do_GET(self):
             parsed = urlparse(self.path)
@@ -372,28 +291,32 @@ def _build_handler():
                     welcome_assets.normalize_session_id(requested_session_id)
                     or welcome_assets.create_welcome_session_id()
                 )
-                self.send_response(200)
-                self._send_cors_headers()
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
                 payload = _build_frontend_config_payload(
                     debug_requested=debug_requested,
                     session_id=session_id,
                 )
-                self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+                self._write_json_response(payload)
                 return
 
             if path != "/health":
                 self.send_response(404)
                 self._send_cors_headers()
+                self.send_header("Content-Length", "0")
+                self.send_header("Connection", "close")
                 self.end_headers()
+                self.close_connection = True
                 return
 
+            body = b'{"status":"ok"}'
             self.send_response(200)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
             self.end_headers()
-            self.wfile.write(b'{"status":"ok"}')
+            self.wfile.write(body)
+            self.wfile.flush()
+            self.close_connection = True
 
         def do_POST(self):
             parsed = urlparse(self.path)
@@ -407,7 +330,6 @@ def _build_handler():
                         web_top_k=payload.get("web_top_k"),
                     )
 
-                    self._start_json_response()
                     self._write_json_response(
                         {
                             "ok": True,
@@ -416,7 +338,6 @@ def _build_handler():
                         }
                     )
                 except Exception as exc:
-                    self._start_json_response()
                     self._write_json_response(
                         {
                             "ok": False,
@@ -458,7 +379,6 @@ def _build_handler():
                     else:
                         content, metrics = ask_with_metrics(user_input=user_input, model=model)
 
-                    self._start_json_response()
                     response_payload = {
                         "ok": True,
                         "content": content,
@@ -472,7 +392,6 @@ def _build_handler():
                         }
                     self._write_json_response(response_payload)
                 except Exception as exc:
-                    self._start_json_response()
                     self._write_json_response(
                         {
                             "ok": False,
