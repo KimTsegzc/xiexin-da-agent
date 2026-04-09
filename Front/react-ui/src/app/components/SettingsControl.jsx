@@ -289,7 +289,6 @@ export function SettingsControl({
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareImageUrl, setShareImageUrl] = useState("");
-  const [shareHint, setShareHint] = useState("");
   const commentInputRef = useRef(null);
   const commentsSectionRef = useRef(null);
   const shareImagePromiseRef = useRef(null);
@@ -455,7 +454,6 @@ export function SettingsControl({
     if (shareBusy) return;
     setShareBusy(true);
     setErrorText("");
-    setShareHint("");
     try {
       const link = window.location.href;
       const shared = await tryNativeWechatShare({
@@ -466,13 +464,11 @@ export function SettingsControl({
       });
 
       if (shared) {
-        setShareHint("已触发微信分享面板。");
         return;
       }
 
       const imageUrl = await ensureShareImageUrl();
       setSharePanelOpen(true);
-      setShareHint("当前环境未直接调起微信分享，已生成图片提示可保存。");
     } catch (error) {
       setErrorText(error?.message || "转发失败，请稍后重试");
     } finally {
@@ -595,9 +591,6 @@ export function SettingsControl({
               </svg>
             </button>
           </div>
-
-          {shareHint ? <div className="info-inline-hint">{shareHint}</div> : null}
-
           <div className="info-comments" ref={commentsSectionRef}>
             <div className="info-meta-label">评论区</div>
             <div className="info-comment-list" aria-live="polite">
