@@ -710,6 +710,14 @@ textarea {
   flex: 1;
 }
 
+.info-share-full-note {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 2px 0 4px;
+}
+
 .info-comments {
   display: grid;
   gap: 8px;

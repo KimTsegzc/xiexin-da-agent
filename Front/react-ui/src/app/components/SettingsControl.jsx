@@ -562,14 +562,18 @@ export function SettingsControl({
               <div className="info-share-full-image-wrap">
                 {shareImageUrl ? <img className="info-share-full-image" src={shareImageUrl} alt="分享提示图预览" /> : null}
               </div>
-              <div className="info-share-full-actions">
-                <button type="button" className="info-share-button" onClick={handleDownloadShareImage}>
-                  保存图片
-                </button>
-                <button type="button" className="info-share-button is-ghost" onClick={() => setSharePanelOpen(false)}>
-                  返回
-                </button>
-              </div>
+              {isWechatClient ? (
+                <div className="info-share-full-note">长按图片保存</div>
+              ) : (
+                <div className="info-share-full-actions">
+                  <button type="button" className="info-share-button" onClick={handleDownloadShareImage}>
+                    保存图片
+                  </button>
+                  <button type="button" className="info-share-button is-ghost" onClick={() => setSharePanelOpen(false)}>
+                    返回
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="info-modal-scroll-content">
