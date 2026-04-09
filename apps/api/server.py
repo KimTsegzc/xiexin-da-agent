@@ -26,6 +26,7 @@ _ensure_repo_root_on_path_for_direct_run()
 from Backend.llm_provider import get_model_list
 from Backend.search_provider import SearchProvider
 from Backend.conversation_context import normalize_session_id
+from Backend.info_reactions import add_comment, add_like, get_reactions, normalize_info_id, remove_like
 from Backend.runtime import get_runtime
 from Backend.runtime.contracts import AgentRequest
 from Backend.settings import get_settings
@@ -293,6 +294,49 @@ def _build_handler():
         def do_GET(self):
             parsed = urlparse(self.path)
             path = parsed.path
+            if path.startswith("/api/info/") and path.endswith("/reactions"):
+                parts = [part for part in path.split("/") if part]
+                if len(parts) != 4:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_INFO_PATH",
+                            "message": "invalid info reactions path",
+                        },
+                        status_code=404,
+                    )
+                    return
+
+                info_id = normalize_info_id(parts[2])
+                if not info_id:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_INFO_ID",
+                            "message": "invalid info id",
+                        },
+                        status_code=400,
+                    )
+                    return
+
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                session_id = normalize_session_id((query.get("session_id", [""])[0] or "").strip())
+                try:
+                    data = get_reactions(info_id=info_id, session_id=session_id)
+                except Exception as exc:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INFO_REACTIONS_FAILED",
+                            "message": str(exc),
+                        },
+                        status_code=500,
+                    )
+                    return
+
+                self._write_json_response({"ok": True, "data": data})
+                return
+
             if path == "/api/frontend-config":
                 debug_requested = _is_debug_requested_from_query(parsed)
                 query = parse_qs(parsed.query, keep_blank_values=True)
@@ -331,6 +375,107 @@ def _build_handler():
         def do_POST(self):
             parsed = urlparse(self.path)
             path = parsed.path
+            if path.startswith("/api/info/"):
+                parts = [part for part in path.split("/") if part]
+                if len(parts) != 4:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_INFO_PATH",
+                            "message": "invalid info action path",
+                        },
+                        status_code=404,
+                    )
+                    return
+
+                info_id = normalize_info_id(parts[2])
+                action = parts[3]
+                if not info_id:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_INFO_ID",
+                            "message": "invalid info id",
+                        },
+                        status_code=400,
+                    )
+                    return
+
+                try:
+                    payload = self._read_json_payload()
+                    session_id = normalize_session_id(
+                        payload.get("session_id")
+                        or payload.get("user_session_id")
+                        or ""
+                    )
+                except Exception as exc:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_JSON_PAYLOAD",
+                            "message": str(exc),
+                        },
+                        status_code=400,
+                    )
+                    return
+
+                if not session_id:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_SESSION_ID",
+                            "message": "session_id is required",
+                        },
+                        status_code=400,
+                    )
+                    return
+
+                try:
+                    if action == "like":
+                        data = add_like(info_id=info_id, session_id=session_id)
+                    elif action == "unlike":
+                        data = remove_like(info_id=info_id, session_id=session_id)
+                    elif action == "comment":
+                        data = add_comment(
+                            info_id=info_id,
+                            session_id=session_id,
+                            content=payload.get("content", ""),
+                            user_name=payload.get("user_name"),
+                        )
+                    else:
+                        self._write_json_response(
+                            {
+                                "ok": False,
+                                "code": "UNKNOWN_INFO_ACTION",
+                                "message": f"unsupported action: {action}",
+                            },
+                            status_code=404,
+                        )
+                        return
+                except ValueError as exc:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INVALID_INFO_REQUEST",
+                            "message": str(exc),
+                        },
+                        status_code=400,
+                    )
+                    return
+                except Exception as exc:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "INFO_ACTION_FAILED",
+                            "message": str(exc),
+                        },
+                        status_code=500,
+                    )
+                    return
+
+                self._write_json_response({"ok": True, "data": data})
+                return
+
             if path == "/api/search/chat":
                 try:
                     payload = self._read_json_payload()

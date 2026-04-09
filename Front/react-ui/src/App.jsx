@@ -170,6 +170,7 @@ export default function App() {
 
   const headerSettingsControl = (
     <SettingsControl
+      apiBase={apiBase}
       anchor="header"
       anchorRef={settingsState.headerSettingsRef}
       showNewChat={chatMode}
@@ -188,6 +189,7 @@ export default function App() {
 
   const railSettingsControl = (
     <SettingsControl
+      apiBase={apiBase}
       anchor="rail"
       anchorRef={settingsState.railSettingsRef}
       showNewChat={chatMode}

@@ -324,7 +324,7 @@ textarea {
   border-radius: 24px;
   background: #ffffff;
   box-shadow: var(--shadow-soft);
-  padding: 44px 44px 40px;
+  padding: 22px 22px 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -333,15 +333,34 @@ textarea {
 .info-modal-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: center;
   gap: 18px;
   flex: 0 0 auto;
+  position: relative;
+}
+
+.info-modal-head-share {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.info-modal-head > div {
+  width: 100%;
+  padding: 0 28px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.info-modal-head-share > div {
+  width: auto;
+  padding: 0;
 }
 
 .info-modal-kicker {
-  margin-bottom: 8px;
-  font-size: 16px;
+  margin-bottom: 0;
+  font-size: 14px;
   letter-spacing: 0.12em;
+  line-height: 1.68;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
@@ -350,7 +369,7 @@ textarea {
 
 .info-modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.68;
   font-weight: 700;
 }
@@ -364,7 +383,9 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: absolute;
+  right: 0;
+  top: 0;
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -386,10 +407,10 @@ textarea {
 }
 
 .info-modal-body {
-  margin-top: 18px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
   flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -399,6 +420,13 @@ textarea {
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
+}
+
+.info-modal-scroll-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-right: 8px;
 }
 
 .info-modal-body::-webkit-scrollbar {
@@ -417,11 +445,11 @@ textarea {
 .info-meta-row,
 .info-meta-block {
   display: grid;
-  gap: 4px;
+  gap: 0;
 }
 
 .info-meta-label {
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: 0.1em;
   line-height: 1.68;
   font-weight: 600;
@@ -432,7 +460,7 @@ textarea {
 }
 
 .info-meta-value {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.68;
   color: var(--ink);
   text-align: left;
@@ -443,18 +471,354 @@ textarea {
   margin: 0;
   padding-left: 18px;
   display: grid;
-  gap: 4px;
-  font-size: 16px;
+  gap: 0;
+  font-size: 14px;
   line-height: 1.68;
   color: var(--ink);
   text-align: left;
   text-align-last: auto;
 }
 
+.info-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.info-action-button {
+  min-height: 36px;
+  border: var(--line-width) solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 88%;
+  justify-self: center;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.info-action-button.is-like {
+  justify-content: center;
+  padding: 0 10px;
+}
+
+.info-action-icon {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.info-action-button.is-like .info-action-icon {
+  width: 25px;
+  height: 25px;
+}
+
+.info-action-icon path {
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.info-action-button.is-like .info-action-icon path {
+  fill: transparent;
+}
+
+.info-action-button.is-like.is-active .info-action-icon path {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.info-action-button.is-busy {
+  opacity: 0.85;
+}
+
+.info-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.info-action-button.is-active:not(.is-like) {
+  border-color: #111111;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.04);
+  background: #f8fafc;
+}
+
+.info-action-button.is-like.is-active {
+  border-color: var(--line);
+  box-shadow: none;
+  background: #ffffff;
+}
+
+.info-action-count {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.info-inline-hint,
+.info-inline-error {
+  border-radius: 10px;
+  border: var(--line-width) solid var(--line);
+  background: #f8fafc;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 10px;
+}
+
+.info-inline-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.info-share-panel {
+  border: var(--line-width) solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.info-share-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.info-share-preview-wrap {
+  border-radius: 12px;
+  border: var(--line-width) solid var(--line);
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.info-share-preview {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.info-share-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.info-share-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.info-share-button.is-ghost {
+  border-color: var(--line);
+  color: var(--ink);
+  background: #ffffff;
+}
+
+.info-modal.is-share-only {
+  padding: 0;
+  position: relative;
+  background: #f3f4f6;
+}
+
+.info-modal.is-share-only .info-modal-body {
+  margin-top: 0;
+  padding-right: 0;
+  margin-right: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+.info-modal.is-share-only .info-modal-head-share {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+}
+
+.info-share-full {
+  height: 100%;
+  min-height: 0;
+  border-radius: 22px;
+  border: 0;
+  background: #f3f4f6;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.info-share-full-image-wrap {
+  min-height: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.info-share-full-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #f3f4f6;
+}
+
+.info-share-full-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.info-share-full-actions .info-share-button {
+  flex: 1;
+}
+
+.info-comments {
+  display: grid;
+  gap: 8px;
+}
+
+.info-comment-list {
+  max-height: min(24vh, 240px);
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.info-comment-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.info-comment-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.info-comment-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.info-comment-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  border-radius: 12px;
+  background: #ffffff;
+  border: var(--line-width) solid var(--line);
+  padding: 10px 12px;
+}
+
+.info-comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.info-comment-user {
+  font-size: 12px;
+  color: #111111;
+  font-weight: 600;
+}
+
+.info-comment-time {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.info-comment-content,
+.info-comment-empty {
+  font-size: 13px;
+  color: #111111;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.info-comment-empty {
+  color: #6b7280;
+}
+
+.info-comment-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.info-comment-editor textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 150px;
+  border: var(--line-width) solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: hidden;
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.info-comment-editor textarea:focus,
+.info-comment-editor textarea:focus-visible {
+  outline: none;
+  border-color: #d1d5db;
+}
+
+.info-comment-submit {
+  justify-self: end;
+  min-width: 70px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: var(--line-width) solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 16px;
+}
+
+.info-comment-submit:disabled {
+  opacity: 0.74;
+  cursor: not-allowed;
+}
+
 @media (orientation: landscape) {
   .info-modal {
     width: min(90vw, calc(100vw - 32px));
-    height: min(90vh, calc(100vh - 32px));
+    max-height: min(80vh, calc(100vh - 32px));
+    height: auto;
   }
 }
 
@@ -755,6 +1119,26 @@ textarea {
 
 .chat-surface::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+.app-shell.is-wechat ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.app-shell.is-mobile-default ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.app-shell.is-wechat .info-modal-body::-webkit-scrollbar,
+.app-shell.is-mobile-default .info-modal-body::-webkit-scrollbar,
+.app-shell.is-wechat .info-comment-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-shell.is-mobile-default .info-comment-list::-webkit-scrollbar {
+  width: 4px;
 }
 
 .message-row {
@@ -1552,7 +1936,7 @@ textarea {
   }
 
   .info-modal {
-    padding: 32px 32px 28px;
+    padding: 16px 16px 14px;
     border-radius: 20px;
   }
 
@@ -1561,13 +1945,12 @@ textarea {
   }
 
   .info-modal-kicker {
-    margin-bottom: 6px;
     font-size: 14px;
   }
 
   .info-modal-title {
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.52;
   }
 
   .info-modal-close {
@@ -1577,8 +1960,8 @@ textarea {
   }
 
   .info-modal-body {
-    margin-top: 14px;
-    gap: 8px;
+    margin-top: 7px;
+    gap: 0;
     padding-right: 8px;
     margin-right: -8px;
   }
@@ -1587,9 +1970,90 @@ textarea {
     width: 8px;
   }
 
+  .app-shell.is-wechat .info-modal-backdrop,
+  .app-shell.is-mobile-default .info-modal-backdrop {
+    padding: 8px;
+  }
+
+  .app-shell.is-wechat .info-modal,
+  .app-shell.is-mobile-default .info-modal {
+    width: min(94vw, calc(100vw - 12px));
+    max-height: 80vh;
+    padding: 7px 0 6px 0;
+  }
+
+  .app-shell.is-wechat .info-modal-head,
+  .app-shell.is-mobile-default .info-modal-head {
+    padding: 0 5px;
+  }
+
+  .app-shell.is-wechat .info-modal-head > div,
+  .app-shell.is-mobile-default .info-modal-head > div {
+    padding: 0 30px;
+  }
+
+  .app-shell.is-wechat .info-modal.is-share-only,
+  .app-shell.is-mobile-default .info-modal.is-share-only {
+    padding: 0;
+  }
+
+  .app-shell.is-wechat .info-modal.is-share-only .info-modal-head-share,
+  .app-shell.is-mobile-default .info-modal.is-share-only .info-modal-head-share {
+    right: 10px;
+    top: 10px;
+  }
+
+  .app-shell.is-wechat .info-modal-body,
+  .app-shell.is-mobile-default .info-modal-body {
+    margin-top: 10px;
+    width: 100%;
+    padding-right: 0;
+    margin-right: 0;
+    scrollbar-gutter: auto;
+  }
+
+  .app-shell.is-wechat .info-modal-scroll-content,
+  .app-shell.is-mobile-default .info-modal-scroll-content {
+    padding: 0 5px;
+  }
+
+  .app-shell.is-wechat .info-modal.is-share-only .info-modal-body,
+  .app-shell.is-mobile-default .info-modal.is-share-only .info-modal-body {
+    width: 100%;
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.is-wechat .info-modal-body::-webkit-scrollbar,
+  .app-shell.is-mobile-default .info-modal-body::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .app-shell.is-wechat ::-webkit-scrollbar,
+  .app-shell.is-mobile-default ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .app-shell.is-wechat .info-actions,
+  .app-shell.is-mobile-default .info-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 8px;
+    margin: 10px 0 14px;
+  }
+
+  .app-shell.is-wechat .info-action-button,
+  .app-shell.is-mobile-default .info-action-button {
+    min-height: 36px;
+    min-width: 0;
+    width: 88%;
+    padding: 0 8px;
+    gap: 5px;
+  }
+
   .info-meta-row,
   .info-meta-block {
-    gap: 3px;
+    gap: 0;
   }
 
   .info-meta-label {
@@ -1603,7 +2067,7 @@ textarea {
 
   .info-feature-list {
     padding-left: 16px;
-    gap: 3px;
+    gap: 0;
     font-size: 14px;
     line-height: 1.52;
   }

@@ -1,4 +1,4 @@
-import { CONFIG_PATH, STREAM_PATH } from "../constants";
+import { CONFIG_PATH, INFO_REACTIONS_BASE_PATH, PROJECT_INFO_ID, STREAM_PATH } from "../constants";
 
 const WELCOME_SESSION_STORAGE_KEY = "xiexin.welcome.session.id";
 
@@ -43,6 +43,10 @@ function getOrCreateWelcomeSessionId() {
   } catch {
     return "";
   }
+}
+
+export function getClientSessionId() {
+  return getOrCreateWelcomeSessionId();
 }
 
 function createWelcomeSessionId() {
@@ -119,4 +123,65 @@ export async function streamChatResponse({ apiBase, userInput, model, onEvent })
   if (buffer.trim()) {
     parseEventLines(`${buffer}\n`, onEvent);
   }
+}
+
+async function requestInfoApi(url, options = {}) {
+  const response = await fetch(withClientDebugQuery(url), {
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options,
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok || payload.ok === false) {
+    const message = payload?.message || `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload.data || {};
+}
+
+function buildInfoPath(apiBase, infoId = PROJECT_INFO_ID, action = "") {
+  const cleanAction = action ? `/${action}` : "";
+  return `${apiBase}${INFO_REACTIONS_BASE_PATH}/${encodeURIComponent(infoId)}${cleanAction}`;
+}
+
+export async function fetchInfoReactions({ apiBase, infoId = PROJECT_INFO_ID, sessionId }) {
+  const params = new URLSearchParams();
+  if (sessionId) {
+    params.set("session_id", sessionId);
+  }
+  const query = params.toString();
+  const url = `${buildInfoPath(apiBase, infoId, "reactions")}${query ? `?${query}` : ""}`;
+  return requestInfoApi(url);
+}
+
+export async function likeInfo({ apiBase, infoId = PROJECT_INFO_ID, sessionId }) {
+  return requestInfoApi(buildInfoPath(apiBase, infoId, "like"), {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
+export async function unlikeInfo({ apiBase, infoId = PROJECT_INFO_ID, sessionId }) {
+  return requestInfoApi(buildInfoPath(apiBase, infoId, "unlike"), {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
+export async function commentInfo({ apiBase, infoId = PROJECT_INFO_ID, sessionId, content, userName }) {
+  return requestInfoApi(buildInfoPath(apiBase, infoId, "comment"), {
+    method: "POST",
+    body: JSON.stringify({
+      session_id: sessionId,
+      content,
+      user_name: userName || "",
+    }),
+  });
 }

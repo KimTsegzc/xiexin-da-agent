@@ -1,6 +1,6 @@
 # XIEXin DA Agent
 
-Version: 9.2.0
+Version: 12.0.0
 
 XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：后端提供流式 LLM 接口，前端提供桌面 / 移动 / 微信兼容聊天界面，部署链路基于 Ubuntu + systemd + nginx，并已接入基础 CI/CD。
 
@@ -66,5 +66,5 @@ XIEXin DA Agent 是一个面向数据分析工作流的轻量 AI Agent 项目：
 
 ## 发布说明
 
-- 版本详情见 [Docs/release/release-9.2.md](Docs/release/release-9.2.md)
-- 当前发布目标：`main` + tag `V9.2`
+- 版本详情见 [Docs/release/release-12.0.md](Docs/release/release-12.0.md)
+- 当前发布目标：`main` + tag `V12.0`
