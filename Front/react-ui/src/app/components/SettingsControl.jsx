@@ -17,6 +17,7 @@ const SHARE_PADDING = 72;
 const SHARE_BODY_LINE_HEIGHT = 56;
 const SHARE_LABEL_LINE_HEIGHT = 56;
 const SHARE_QR_SHIFT = 40;
+const LIKE_COUNT_DISPLAY_BASE = 7;
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -313,7 +314,8 @@ export function SettingsControl({
   const shareImagePromiseRef = useRef(null);
   const sessionId = useMemo(() => getClientSessionId(), []);
   const isWechatClient = clientMode === "wechat";
-  const likeCountText = likeCount > 99 ? "99+" : String(Math.max(0, likeCount));
+  const displayedLikeCount = Math.max(0, likeCount) + LIKE_COUNT_DISPLAY_BASE;
+  const likeCountText = displayedLikeCount > 99 ? "99+" : String(displayedLikeCount);
   const renderedComments = useMemo(
     () => [
       {
@@ -603,7 +605,7 @@ export function SettingsControl({
               <svg className="info-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M12 20.2c-.2 0-.4-.1-.6-.2C8.1 18 3 14.3 3 9.9 3 7.2 5.1 5 7.8 5c1.6 0 3.1.8 4.2 2.1C13 5.8 14.5 5 16.2 5 18.9 5 21 7.2 21 9.9c0 4.4-5.1 8.1-8.4 9.9-.2.1-.4.2-.6.2z" />
               </svg>
-              <span className="info-action-label">赞</span>
+              {!isWechatClient ? <span className="info-action-label">赞</span> : null}
               <span className="info-action-count">{likeCountText}</span>
             </button>
             <button

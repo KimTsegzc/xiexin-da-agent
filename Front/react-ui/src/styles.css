@@ -2112,11 +2112,6 @@ textarea {
     height: 19px;
   }
 
-  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button.is-like .info-action-icon {
-    width: 22px;
-    height: 22px;
-  }
-
   .app-shell.is-wechat .info-modal-head > div {
     padding: 0 26px;
   }
