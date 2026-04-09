@@ -279,6 +279,7 @@ async function createShareImageDataUrl() {
 
 export function SettingsControl({
   apiBase,
+  clientMode,
   anchor,
   anchorRef,
   showNewChat,
@@ -311,6 +312,7 @@ export function SettingsControl({
   const commentsSectionRef = useRef(null);
   const shareImagePromiseRef = useRef(null);
   const sessionId = useMemo(() => getClientSessionId(), []);
+  const isWechatClient = clientMode === "wechat";
   const likeCountText = likeCount > 99 ? "99+" : String(Math.max(0, likeCount));
   const renderedComments = useMemo(
     () => [
@@ -590,7 +592,7 @@ export function SettingsControl({
             <div className="info-meta-value">{PROJECT_INFO.versionChange}</div>
           </div>
 
-          <div className="info-actions" role="group" aria-label="互动操作">
+          <div className={`info-actions ${isWechatClient ? "is-wechat-compact" : ""}`.trim()} role="group" aria-label="互动操作">
             <button
               type="button"
               className={`info-action-button is-like ${userHasLiked ? "is-active" : ""}`}
@@ -615,13 +617,13 @@ export function SettingsControl({
                 <path d="M15 5l6 6-6 6" />
                 <path d="M21 11H9a6 6 0 0 0-6 6" />
               </svg>
-              <span className="info-action-label">转发</span>
+              {!isWechatClient ? <span className="info-action-label">转发</span> : null}
             </button>
             <button type="button" className="info-action-button" onClick={handleFocusComment} aria-label="评论">
               <svg className="info-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 3v-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
               </svg>
-              <span className="info-action-label">评论</span>
+              {!isWechatClient ? <span className="info-action-label">评论</span> : null}
             </button>
           </div>
           <div className="info-comments" ref={commentsSectionRef}>

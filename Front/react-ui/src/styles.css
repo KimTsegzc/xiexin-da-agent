@@ -713,6 +713,7 @@ textarea {
 .info-comments {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .info-comment-list {
@@ -727,6 +728,7 @@ textarea {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
+  min-width: 0;
 }
 
 .info-comment-list::-webkit-scrollbar {
@@ -746,6 +748,7 @@ textarea {
   display: grid;
   gap: 6px;
   width: 100%;
+  min-width: 0;
   border-radius: 12px;
   background: #ffffff;
   border: var(--line-width) solid var(--line);
@@ -757,17 +760,20 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .info-comment-user {
   font-size: 12px;
   color: #111111;
   font-weight: 600;
+  min-width: 0;
 }
 
 .info-comment-time {
   font-size: 11px;
   color: #6b7280;
+  flex: 0 0 auto;
 }
 
 .info-comment-content,
@@ -787,10 +793,12 @@ textarea {
   display: flex;
   align-items: stretch;
   gap: 8px;
+  min-width: 0;
 }
 
 .info-comment-editor textarea {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 40px;
   height: 40px;
   max-height: 150px;
@@ -2039,9 +2047,17 @@ textarea {
     scrollbar-gutter: auto;
   }
 
+  .app-shell.is-wechat .info-modal-body {
+    overflow-x: hidden;
+  }
+
   .app-shell.is-wechat .info-modal-scroll-content,
   .app-shell.is-mobile-default .info-modal-scroll-content {
     padding: 0 5px;
+  }
+
+  .app-shell.is-wechat .info-modal-scroll-content {
+    min-width: 0;
   }
 
   .app-shell.is-wechat .info-modal.is-share-only .info-modal-body,
@@ -2062,16 +2078,14 @@ textarea {
     height: 4px;
   }
 
-  .app-shell.is-wechat .info-actions,
-  .app-shell.is-mobile-default .info-actions {
+  .app-shell.is-wechat .info-actions.is-wechat-compact {
     grid-template-columns: minmax(92px, 1fr) repeat(2, 36px);
     column-gap: 8px;
     justify-content: start;
     margin: 10px 0 14px;
   }
 
-  .app-shell.is-wechat .info-action-button,
-  .app-shell.is-mobile-default .info-action-button {
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button {
     min-height: 36px;
     min-width: 0;
     width: 100%;
@@ -2079,21 +2093,85 @@ textarea {
     gap: 5px;
   }
 
-  .app-shell.is-wechat .info-action-button.is-like,
-  .app-shell.is-mobile-default .info-action-button.is-like {
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button.is-like {
     min-width: 92px;
   }
 
-  .app-shell.is-wechat .info-action-button:not(.is-like),
-  .app-shell.is-mobile-default .info-action-button:not(.is-like) {
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button:not(.is-like) {
     width: 36px;
     min-width: 36px;
     padding: 0;
   }
 
-  .app-shell.is-wechat .info-action-button:not(.is-like) .info-action-label,
-  .app-shell.is-mobile-default .info-action-button:not(.is-like) .info-action-label {
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button:not(.is-like) .info-action-label {
     display: none;
+  }
+
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .app-shell.is-wechat .info-actions.is-wechat-compact .info-action-button.is-like .info-action-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .app-shell.is-wechat .info-modal-head > div {
+    padding: 0 26px;
+  }
+
+  .app-shell.is-wechat .info-modal-head-title {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+  }
+
+  .app-shell.is-wechat .info-modal-head-project {
+    font-size: 11px;
+  }
+
+  .app-shell.is-wechat .info-meta-label {
+    font-size: 12px;
+  }
+
+  .app-shell.is-wechat .info-meta-value,
+  .app-shell.is-wechat .info-feature-list {
+    font-size: 12px;
+    line-height: 1.44;
+  }
+
+  .app-shell.is-wechat .info-feature-list {
+    padding-left: 14px;
+  }
+
+  .app-shell.is-wechat .info-action-button {
+    font-size: 12px;
+  }
+
+  .app-shell.is-wechat .info-action-label,
+  .app-shell.is-wechat .info-action-count,
+  .app-shell.is-wechat .info-comment-submit {
+    font-size: 12px;
+  }
+
+  .app-shell.is-wechat .info-comment-user {
+    font-size: 11px;
+  }
+
+  .app-shell.is-wechat .info-comment-time {
+    font-size: 10px;
+  }
+
+  .app-shell.is-wechat .info-comment-content,
+  .app-shell.is-wechat .info-comment-empty,
+  .app-shell.is-wechat .info-comment-editor textarea,
+  .app-shell.is-wechat .info-comment-editor textarea::placeholder {
+    font-size: 12px;
+    line-height: 1.44;
+  }
+
+  .app-shell.is-wechat .info-comment-editor textarea {
+    padding: 8px 11px;
   }
 
   .info-meta-row,
