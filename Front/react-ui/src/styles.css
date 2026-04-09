@@ -2002,13 +2002,13 @@ textarea {
 
   .app-shell.is-wechat .info-modal-backdrop,
   .app-shell.is-mobile-default .info-modal-backdrop {
-    padding: 4px;
+    padding: 0;
   }
 
   .app-shell.is-wechat .info-modal,
   .app-shell.is-mobile-default .info-modal {
-    width: min(100vw, calc(100vw - 8px));
-    max-height: 80vh;
+    width: 100vw;
+    max-height: 90vh;
     padding: 7px 0 6px 0;
   }
 
