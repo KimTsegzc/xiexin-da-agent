@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import difflib
 import json
 import re
+from pathlib import Path
 from typing import Any, Iterator
 
 from .... import LLMProvider
@@ -13,6 +15,8 @@ from ..base import BaseSkill
 _EMAIL_ADAPTER_MODEL = "qwen-turbo"
 _EMAIL_ADDRESS_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _MAIL_HISTORY_QUERY_RE = re.compile(r"已发送|发过.*邮件|邮件记录|邮件历史|我刚发了哪些邮件", re.IGNORECASE)
+_CONTACT_FILE = Path(__file__).resolve().parent / "contact" / "contacts.json"
+_CONTACT_SPLIT_RE = re.compile(r"[\s,，。.:：;；()（）\[\]【】<>《》'\"/\\|]+")
 
 
 def _strip_user_prefix(text: str) -> str:
@@ -85,6 +89,119 @@ def _extract_receiver_from_text(text: str) -> str | None:
     if not match:
         return None
     return match.group(0).strip() or None
+
+
+def _normalize_contact_key(text: str) -> str:
+    value = (text or "").strip().lower()
+    value = re.sub(r"[\s\-_.·]", "", value)
+    return value
+
+
+def _load_contacts() -> list[dict[str, Any]]:
+    if not _CONTACT_FILE.exists():
+        return []
+    try:
+        payload = json.loads(_CONTACT_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, list):
+        return []
+
+    contacts: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        email = str(item.get("email") or "").strip()
+        if not name or not email:
+            continue
+        aliases_raw = item.get("aliases")
+        aliases: list[str] = []
+        if isinstance(aliases_raw, list):
+            for alias in aliases_raw:
+                alias_text = str(alias or "").strip()
+                if alias_text:
+                    aliases.append(alias_text)
+        contacts.append(
+            {
+                "name": name,
+                "email": email,
+                "aliases": aliases,
+            }
+        )
+    return contacts
+
+
+def _build_contact_maps(contacts: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], list[tuple[str, dict[str, Any]]]]:
+    by_key: dict[str, dict[str, Any]] = {}
+    keywords: list[tuple[str, dict[str, Any]]] = []
+    for contact in contacts:
+        names = [str(contact.get("name") or "").strip(), *[str(a).strip() for a in contact.get("aliases") or []]]
+        for name in names:
+            if not name:
+                continue
+            key = _normalize_contact_key(name)
+            if key:
+                by_key[key] = contact
+                keywords.append((name, contact))
+    # 长词优先，避免 "谢" 覆盖 "谢鑫"。
+    keywords.sort(key=lambda item: len(item[0]), reverse=True)
+    return by_key, keywords
+
+
+def _resolve_receiver_from_contacts(receiver: str | None, raw_input: str) -> tuple[str | None, dict[str, Any]]:
+    contacts = _load_contacts()
+    if not contacts:
+        return receiver, {"contact_resolved": False, "contact_match": "none"}
+
+    by_key, keywords = _build_contact_maps(contacts)
+
+    # 1) receiver 已是邮箱，直接通过。
+    if receiver and _EMAIL_ADDRESS_RE.fullmatch(receiver.strip()):
+        return receiver, {"contact_resolved": False, "contact_match": "already_email"}
+
+    # 2) receiver 作为人名精确匹配。
+    receiver_text = str(receiver or "").strip()
+    if receiver_text:
+        hit = by_key.get(_normalize_contact_key(receiver_text))
+        if hit:
+            return str(hit.get("email") or "").strip() or receiver, {
+                "contact_resolved": True,
+                "contact_match": "receiver_exact",
+                "contact_name": hit.get("name"),
+            }
+
+    # 3) 在用户原文中做姓名/别名命中。
+    text = raw_input or ""
+    for keyword, hit in keywords:
+        if keyword and keyword in text:
+            return str(hit.get("email") or "").strip() or receiver, {
+                "contact_resolved": True,
+                "contact_match": "text_contains",
+                "contact_name": hit.get("name"),
+            }
+
+    # 4) 轻量模糊匹配（用于“谢新”“龙将”这类轻微输错）。
+    tokens = [token for token in _CONTACT_SPLIT_RE.split(text) if token]
+    if receiver_text:
+        tokens.append(receiver_text)
+    candidates = [_normalize_contact_key(token) for token in tokens if token]
+    keys = list(by_key.keys())
+    for candidate in candidates:
+        if not candidate:
+            continue
+        close = difflib.get_close_matches(candidate, keys, n=1, cutoff=0.82)
+        if not close:
+            continue
+        hit = by_key.get(close[0])
+        if hit:
+            return str(hit.get("email") or "").strip() or receiver, {
+                "contact_resolved": True,
+                "contact_match": "fuzzy",
+                "contact_name": hit.get("name"),
+            }
+
+    return receiver, {"contact_resolved": False, "contact_match": "none"}
 
 
 def _adapt_email_request_with_llm(request: AgentRequest) -> dict[str, str] | None:
@@ -229,6 +346,8 @@ class SendEmailSkill(BaseSkill):
         if not receiver:
             receiver = _extract_receiver_from_text(raw_input)
 
+        receiver, contact_metrics = _resolve_receiver_from_contacts(receiver=receiver, raw_input=raw_input)
+
         llm_adapter_used = False
         if not subject or not body:
             adapted = _adapt_email_request_with_llm(request)
@@ -240,6 +359,11 @@ class SendEmailSkill(BaseSkill):
                     body = str(adapted.get("body") or "").strip()
                 if not receiver:
                     receiver = str(adapted.get("receiver") or "").strip() or None
+
+        # LLM 可能回填人名而非邮箱，这里再次做联系人查转兜底。
+        receiver, post_adapter_contact_metrics = _resolve_receiver_from_contacts(receiver=receiver, raw_input=raw_input)
+        if post_adapter_contact_metrics.get("contact_resolved"):
+            contact_metrics = post_adapter_contact_metrics
 
         if not subject or not body:
             return AgentResponse(
@@ -253,6 +377,7 @@ class SendEmailSkill(BaseSkill):
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
                         "implementation_hint": "大模型汇总（搜索未接入）",
+                        **contact_metrics,
                     },
                 },
             )
@@ -286,6 +411,7 @@ class SendEmailSkill(BaseSkill):
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
                         "implementation_hint": "大模型汇总（搜索未接入）",
+                        **contact_metrics,
                         "llm_failure_explainer_used": bool(llm_failure_explanation),
                         "llm_failure_explainer_model": _EMAIL_ADAPTER_MODEL,
                     },
@@ -314,6 +440,7 @@ class SendEmailSkill(BaseSkill):
                     "llm_adapter_used": llm_adapter_used,
                     "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
                     "implementation_hint": "大模型汇总（搜索未接入）",
+                    **contact_metrics,
                 },
             },
         )

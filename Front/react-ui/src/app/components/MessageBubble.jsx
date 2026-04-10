@@ -34,6 +34,7 @@ function Metrics({ metrics }) {
 
 export function MessageBubble({ message }) {
   const showPendingSpinner = message.role === "assistant" && message.pending === true;
+  const pendingLabel = message.pendingLabel || message.content || "处理中...";
 
   return (
     <div className={`message-row ${message.role}`}>
@@ -41,13 +42,13 @@ export function MessageBubble({ message }) {
         {showPendingSpinner ? (
           <div className="message-loading-row" aria-live="polite">
             <span className="message-loading-spinner" aria-hidden="true" />
-            <span className="message-loading-text">处理中...</span>
+            <span className="message-loading-text">{pendingLabel}</span>
           </div>
         ) : null}
-        {message.role === "assistant" ? (
+        {message.role === "assistant" && !showPendingSpinner ? (
           <div className="message-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }} />
         ) : (
-          <div className="message-content">{message.content}</div>
+          message.role === "assistant" ? null : <div className="message-content">{message.content}</div>
         )}
         <Metrics metrics={message.metrics} />
       </div>

@@ -59,6 +59,16 @@ function persistSession(messages) {
   }
 }
 
+function toSkillActionLabel(skillName, skillLabel) {
+  if (skillName === "send_email") return "发送邮件";
+  if (skillName === "skill_ccb_get_handler") return "查询职能";
+  if (skillName === "direct_chat") return "通用对话";
+  const normalized = (skillLabel || "").trim();
+  if (!normalized) return "";
+  if (normalized === "邮件发送") return "发送邮件";
+  return normalized;
+}
+
 export function useChatSession({ apiBase, selectedModel }) {
   const [sessionState] = useState(() => readPersistedSession());
   const [messages, setMessages] = useState(sessionState.messages);
@@ -87,7 +97,7 @@ export function useChatSession({ apiBase, selectedModel }) {
       return [
         ...current,
         userMessage,
-        { role: "assistant", content: "正在连接服务...", metrics: null, pending: true },
+        { role: "assistant", content: "连接中", metrics: null, pending: true, pendingLabel: "连接中" },
       ];
     });
 
@@ -109,30 +119,33 @@ export function useChatSession({ apiBase, selectedModel }) {
 
           if (eventPayload.type === "pulse") {
             const pulseText = eventPayload.stage === "accepted"
-              ? (activeSkillLabel ? `正在调用${activeSkillLabel}技能...` : "正在连接模型...")
-              : "正在生成回复...";
+              ? (activeSkillLabel ? `技能运行中（${activeSkillLabel}）` : "路由中")
+              : "处理中";
             setMessages((current) => current.map((message, index) => (
-              index === assistantIndex ? { ...message, content: pulseText, pending: true } : message
+              index === assistantIndex ? { ...message, content: pulseText, pending: true, pendingLabel: pulseText } : message
             )));
           }
 
           if (eventPayload.type === "skill") {
             activeSkillName = eventPayload?.skill?.name || "";
-            activeSkillLabel = eventPayload?.skill?.label || eventPayload?.skill?.name || "";
+            activeSkillLabel = toSkillActionLabel(
+              activeSkillName,
+              eventPayload?.skill?.label || eventPayload?.skill?.name || "",
+            );
             if (activeSkillName === "direct_chat" || activeSkillLabel === "通用对话") {
                 activeSkillLabel = "";
                 return;
             }
-            const skillHint = activeSkillLabel ? `正在调用${activeSkillLabel}技能...` : "正在调用技能...";
+            const skillHint = activeSkillLabel ? `技能运行中（${activeSkillLabel}）` : "技能运行中";
             setMessages((current) => current.map((message, index) => (
-              index === assistantIndex ? { ...message, content: skillHint, pending: true } : message
+              index === assistantIndex ? { ...message, content: skillHint, pending: true, pendingLabel: skillHint } : message
             )));
           }
 
           if (eventPayload.type === "delta") {
             assistantText += eventPayload.content || "";
             setMessages((current) => current.map((message, index) => (
-              index === assistantIndex ? { ...message, content: assistantText, pending: true } : message
+              index === assistantIndex ? { ...message, content: assistantText, pending: false, pendingLabel: "" } : message
             )));
           }
 
@@ -141,7 +154,7 @@ export function useChatSession({ apiBase, selectedModel }) {
             logContextMetrics(eventPayload.metrics || null);
             setMessages((current) => current.map((message, index) => (
               index === assistantIndex
-                ? { ...message, content: assistantText, metrics: eventPayload.metrics || null, pending: false }
+                ? { ...message, content: assistantText, metrics: eventPayload.metrics || null, pending: false, pendingLabel: "" }
                 : message
             )));
           }
@@ -149,7 +162,7 @@ export function useChatSession({ apiBase, selectedModel }) {
           if (eventPayload.type === "error") {
             setMessages((current) => current.map((message, index) => (
               index === assistantIndex
-                ? { ...message, content: `请求失败：${eventPayload.message || "unknown error"}`, pending: false }
+                ? { ...message, content: `请求失败：${eventPayload.message || "unknown error"}`, pending: false, pendingLabel: "" }
                 : message
             )));
           }
@@ -159,7 +172,7 @@ export function useChatSession({ apiBase, selectedModel }) {
       if (sessionVersionRef.current !== sessionVersion) return;
       setMessages((current) => current.map((message, index) => (
         index === assistantIndex
-          ? { ...message, content: `请求失败：${error.message || error}`, pending: false }
+          ? { ...message, content: `请求失败：${error.message || error}`, pending: false, pendingLabel: "" }
           : message
       )));
     } finally {

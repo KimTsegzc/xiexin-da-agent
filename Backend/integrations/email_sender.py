@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import smtplib
 import ssl
+import re
 import sys
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -34,11 +35,18 @@ class EmailSenderError(RuntimeError):
     """Structured email sender error for backend integrations."""
 
 
+_EMAIL_ADDRESS_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
+
 def _resolve_receiver(receiver: str | None, email_settings: EmailSettings) -> str:
     resolved_receiver = (receiver or email_settings.default_receiver or "").strip()
     if not resolved_receiver:
         raise EmailSenderError(
             "Missing email receiver. Pass receiver explicitly or set EMAIL_DEFAULT_RECEIVER."
+        )
+    if not _EMAIL_ADDRESS_RE.fullmatch(resolved_receiver):
+        raise EmailSenderError(
+            f"Invalid receiver email address: {resolved_receiver}. Please provide a full email like user@example.com."
         )
     return resolved_receiver
 
@@ -107,7 +115,7 @@ def send_text_email(
                     server.starttls(context=ssl.create_default_context())
                 server.login(sender, auth_code)
                 server.sendmail(sender, [resolved_receiver], message.as_string())
-    except (TimeoutError, OSError, smtplib.SMTPException) as exc:
+    except (TimeoutError, OSError, smtplib.SMTPException, UnicodeEncodeError) as exc:
         raise EmailSenderError(f"Failed to send email via SMTP: {exc}") from exc
 
     return {
