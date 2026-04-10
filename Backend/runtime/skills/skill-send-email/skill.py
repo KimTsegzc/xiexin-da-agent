@@ -12,6 +12,21 @@ from ..base import BaseSkill
 
 _EMAIL_ADAPTER_MODEL = "qwen-turbo"
 _EMAIL_ADDRESS_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_SEARCH_FIRST_HINTS = (
+    "最新",
+    "今天",
+    "昨日",
+    "昨天",
+    "近况",
+    "局势",
+    "新闻",
+    "行情",
+    "汇率",
+    "天气",
+    "市场",
+    "检索",
+    "搜索",
+)
 
 
 def _strip_user_prefix(text: str) -> str:
@@ -139,6 +154,84 @@ def _build_usage_tip() -> str:
     )
 
 
+def _needs_search_first(request: AgentRequest, subject: str, body: str) -> bool:
+    metadata = request.metadata if isinstance(request.metadata, dict) else {}
+    email_meta = metadata.get("email") if isinstance(metadata.get("email"), dict) else {}
+
+    meta_flag = email_meta.get("search_first")
+    if meta_flag is None:
+        meta_flag = metadata.get("search_first")
+    if isinstance(meta_flag, bool):
+        return meta_flag
+    if isinstance(meta_flag, str):
+        normalized = meta_flag.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+
+    raw = _strip_user_prefix(request.user_input)
+    if any(hint in raw for hint in _SEARCH_FIRST_HINTS):
+        return True
+
+    # 内容过短时优先触发搜索增强，避免"发出去了但信息太空"。
+    if len((body or "").strip()) < 60:
+        return True
+
+    # 默认开启搜索优先，可通过 metadata.search_first=false 关闭。
+    return True
+
+
+def _enrich_email_with_search(
+    *,
+    request: AgentRequest,
+    receiver: str | None,
+    subject: str,
+    body: str,
+) -> dict[str, str] | None:
+    metadata = request.metadata if isinstance(request.metadata, dict) else {}
+    raw_input = _strip_user_prefix(request.user_input)
+    system_prompt = (
+        "你是邮件内容增强助手。"
+        "请优先联网检索与用户请求相关的最新信息，然后输出JSON。"
+        "JSON schema: {\"subject\": string, \"body\": string}。"
+        "要求：主题简洁；正文结构清晰、可直接发送；"
+        "如果用户已给出明确正文，仅做轻量补充，不要改写核心意图。"
+        "禁止输出JSON以外的内容。"
+    )
+    payload = {
+        "user_input": raw_input,
+        "metadata": metadata,
+        "receiver": receiver,
+        "subject": subject,
+        "body": body,
+    }
+    try:
+        response = LLMProvider.with_response_messages(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+            model=_EMAIL_ADAPTER_MODEL,
+            enable_search=True,
+        )
+    except Exception:
+        return None
+
+    parsed = _extract_json_payload(str(response.get("content", "") or ""))
+    if not parsed:
+        return None
+
+    enriched_subject = str(parsed.get("subject") or "").strip()
+    enriched_body = str(parsed.get("body") or parsed.get("content") or "").strip()
+    if not enriched_subject and not enriched_body:
+        return None
+    return {
+        "subject": enriched_subject,
+        "body": enriched_body,
+    }
+
+
 def _explain_email_failure_with_llm(
     *,
     error_text: str,
@@ -211,6 +304,7 @@ class SendEmailSkill(BaseSkill):
             receiver = _extract_receiver_from_text(raw_input)
 
         llm_adapter_used = False
+        llm_search_enricher_used = False
         if not subject or not body:
             adapted = _adapt_email_request_with_llm(request)
             if adapted:
@@ -221,6 +315,18 @@ class SendEmailSkill(BaseSkill):
                     body = str(adapted.get("body") or "").strip()
                 if not receiver:
                     receiver = str(adapted.get("receiver") or "").strip() or None
+
+        if subject and body and _needs_search_first(request, subject, body):
+            enriched = _enrich_email_with_search(
+                request=request,
+                receiver=receiver,
+                subject=subject,
+                body=body,
+            )
+            if enriched:
+                llm_search_enricher_used = True
+                subject = str(enriched.get("subject") or subject).strip() or subject
+                body = str(enriched.get("body") or body).strip() or body
 
         if not subject or not body:
             return AgentResponse(
@@ -233,6 +339,8 @@ class SendEmailSkill(BaseSkill):
                         "receiver": receiver,
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
+                        "llm_search_enricher_used": llm_search_enricher_used,
+                        "llm_search_enricher_model": _EMAIL_ADAPTER_MODEL,
                     },
                 },
             )
@@ -265,6 +373,8 @@ class SendEmailSkill(BaseSkill):
                         "subject": subject,
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
+                        "llm_search_enricher_used": llm_search_enricher_used,
+                        "llm_search_enricher_model": _EMAIL_ADAPTER_MODEL,
                         "llm_failure_explainer_used": bool(llm_failure_explanation),
                         "llm_failure_explainer_model": _EMAIL_ADAPTER_MODEL,
                     },
@@ -292,6 +402,8 @@ class SendEmailSkill(BaseSkill):
                     "smtp_port": result.get("smtp_port"),
                     "llm_adapter_used": llm_adapter_used,
                     "llm_adapter_model": _EMAIL_ADAPTER_MODEL,
+                    "llm_search_enricher_used": llm_search_enricher_used,
+                    "llm_search_enricher_model": _EMAIL_ADAPTER_MODEL,
                 },
             },
         )
