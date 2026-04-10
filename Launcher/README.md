@@ -18,6 +18,10 @@ Launcher/
 │   ├── stop.ps1          # 停止全栈
 │   ├── restart.ps1       # 重启全栈
 │   └── build.ps1         # PyInstaller 打包 Go_XIEXin.exe
+├── Ubuntu/               # Ubuntu 线上服务启停脚本（systemd）
+│   ├── start.sh          # 启动后端+前端服务
+│   ├── stop.sh           # 停止后端+前端服务
+│   └── restart.sh        # 重启后端+前端服务
 ├── Go_XIEXin.py          # 启动核心（跨平台）
 ├── Go_XIEXin.ico         # 启动器图标（打包用）
 └── README.md
@@ -58,6 +62,21 @@ powershell -ExecutionPolicy Bypass -File Launcher\Win\build.ps1
 ```
 
 可选参数：`-NoBrowser`、`-PythonOverride <path>`、`-UseLauncherExe`
+
+## Ubuntu 日常命令
+
+```bash
+# 启动线上服务（systemd）
+bash Launcher/Ubuntu/start.sh
+
+# 停止线上服务
+bash Launcher/Ubuntu/stop.sh
+
+# 重启线上服务
+bash Launcher/Ubuntu/restart.sh
+```
+
+可选环境变量：`APP_DIR`（默认 `/srv/xiexin-da-agent`）、`BACKEND_SERVICE`（默认 `xiexin-backend`）、`FRONTEND_SERVICE`（默认 `xiexin-frontend`）
 
 ## 运行时文件
 
