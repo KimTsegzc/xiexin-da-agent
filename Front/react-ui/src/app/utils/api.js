@@ -125,6 +125,9 @@ export async function streamChatResponse({ apiBase, userInput, model, files, onE
   const debug = isDebugModeEnabled();
   const welcomeSessionId = getOrCreateWelcomeSessionId();
   const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+  if (selectedFiles.some((file) => !String(file?.type || "").startsWith("image/"))) {
+    throw new Error("暂时只支持图片解析，请上传 jpg、png、webp 等图片文件。");
+  }
   let metadata = {};
   let resolvedModel = model || undefined;
 

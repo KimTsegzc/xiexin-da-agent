@@ -75,6 +75,7 @@ export function useChatSession({ apiBase, selectedModel }) {
   const [chatMode, setChatMode] = useState(sessionState.chatMode);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [attachmentNotice, setAttachmentNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const sessionVersionRef = useRef(0);
 
@@ -83,11 +84,24 @@ export function useChatSession({ apiBase, selectedModel }) {
   function appendAttachments(fileList) {
     const nextFiles = Array.from(fileList || []).filter(Boolean);
     if (!nextFiles.length) return;
-    setAttachments((current) => [...current, ...nextFiles]);
+    const imageFiles = nextFiles.filter((file) => String(file?.type || "").startsWith("image/"));
+    const rejectedCount = nextFiles.length - imageFiles.length;
+
+    if (imageFiles.length) {
+      setAttachments((current) => [...current, ...imageFiles]);
+    }
+
+    if (rejectedCount > 0) {
+      setAttachmentNotice("暂时只支持图片解析，请上传 jpg、png、webp 等图片文件。");
+      return;
+    }
+
+    setAttachmentNotice("");
   }
 
   function removeAttachment(indexToRemove) {
     setAttachments((current) => current.filter((_, index) => index !== indexToRemove));
+    setAttachmentNotice("");
   }
 
   useEffect(() => {
@@ -116,6 +130,7 @@ export function useChatSession({ apiBase, selectedModel }) {
     setChatMode(true);
     setInput("");
     setAttachments([]);
+    setAttachmentNotice("");
     setLoading(true);
     setMessages((current) => {
       assistantIndex = current.length + 1;
@@ -227,6 +242,7 @@ export function useChatSession({ apiBase, selectedModel }) {
     setMessages([]);
     setInput("");
     setAttachments([]);
+    setAttachmentNotice("");
     setChatMode(false);
     setLoading(false);
     try {
@@ -246,6 +262,7 @@ export function useChatSession({ apiBase, selectedModel }) {
     input,
     setInput,
     attachments,
+    attachmentNotice,
     appendAttachments,
     removeAttachment,
     effectiveComposerModel,

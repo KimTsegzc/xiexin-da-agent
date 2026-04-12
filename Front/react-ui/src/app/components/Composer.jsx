@@ -4,6 +4,7 @@ export function Composer({
   input,
   setInput,
   attachments,
+  attachmentNotice,
   onAttachFiles,
   onRemoveAttachment,
   handleSubmit,
@@ -47,6 +48,7 @@ export function Composer({
             ))}
           </div>
         ) : null}
+        {attachmentNotice ? <div className="composer-inline-notice">{attachmentNotice}</div> : null}
         <div className="composer-row">
           <div className="composer-leading">
             <button
@@ -54,8 +56,8 @@ export function Composer({
               className="composer-attach-button"
               onClick={handleAttachClick}
               disabled={!configReady || loading}
-              aria-label="上传图片或文件"
-              title="上传图片或文件"
+              aria-label="上传图片"
+              title="上传图片"
             >
               +
             </button>
@@ -65,6 +67,7 @@ export function Composer({
             ref={fileInputRef}
             type="file"
             multiple
+            accept="image/*"
             onChange={handleFileChange}
             className="composer-file-input"
             disabled={!configReady || loading}

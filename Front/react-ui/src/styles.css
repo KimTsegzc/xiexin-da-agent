@@ -1410,6 +1410,14 @@ textarea {
   width: 100%;
 }
 
+.composer-inline-notice {
+  width: 100%;
+  padding: 0 6px;
+  color: #a15a00;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .composer-attachment-chip {
   display: inline-flex;
   align-items: center;
