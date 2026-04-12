@@ -6,13 +6,14 @@ import random
 import re
 import threading
 import time
+import unicodedata
 import uuid
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-_DEFAULT_WELCOME = "你好，我是鑫哥~"
+_DEFAULT_WELCOME = "因为山就在那里 🗻"
 
 _MEMORY_ROOT = REPO_ROOT / "Memory"
 _APP_SPACE_DIR = _MEMORY_ROOT / "app_space"
@@ -60,16 +61,65 @@ def normalize_welcome_text(text: str) -> str:
     return _normalize_welcome_text(text)
 
 
+def _is_decorative_suffix_token(token: str) -> bool:
+    stripped = "".join(
+        char
+        for char in (token or "")
+        if unicodedata.category(char) not in {"Cf", "Mn", "Sk"}
+    )
+    if not stripped:
+        return False
+    return all(unicodedata.category(char).startswith(("S", "P")) for char in stripped)
+
+
+def _canonicalize_welcome_text(text: str) -> str:
+    normalized = _normalize_welcome_text(text)
+    if not normalized:
+        return _DEFAULT_WELCOME
+
+    tokens = normalized.split(" ")
+    if len(tokens) > 1 and _is_decorative_suffix_token(tokens[-1]):
+        normalized = " ".join(tokens[:-1]).strip()
+    return normalized or _DEFAULT_WELCOME
+
+
 def _dedupe_keep_order(items: list[str]) -> list[str]:
     seen = set()
     deduped: list[str] = []
     for item in items:
         normalized = _normalize_welcome_text(item)
-        if not normalized or normalized in seen:
+        canonical = _canonicalize_welcome_text(normalized)
+        if not normalized or canonical in seen:
             continue
-        seen.add(normalized)
+        seen.add(canonical)
         deduped.append(normalized)
     return deduped
+
+
+def _read_recent_welcome_entries(
+    session_id: str,
+    limit: int = _WELCOME_HISTORY_MAX_ITEMS,
+) -> list[str]:
+    _ensure_memory_layout()
+    target_file = _session_welcome_file(session_id)
+    target_file.touch(exist_ok=True)
+    items: list[str] = []
+    try:
+        for raw_line in target_file.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                parsed = json.loads(line)
+                text = str(parsed.get("text", "")).strip()
+            except Exception:
+                text = line
+            normalized = _normalize_welcome_text(text)
+            if normalized:
+                items.append(normalized)
+    except OSError:
+        return []
+    return items[-max(1, int(limit)) :]
 
 
 def _read_sayings() -> list[str]:
@@ -89,26 +139,7 @@ def _read_user_specific_welcome_memory(
     session_id: str,
     limit: int = _WELCOME_HISTORY_MAX_ITEMS,
 ) -> list[str]:
-    _ensure_memory_layout()
-    target_file = _session_welcome_file(session_id)
-    target_file.touch(exist_ok=True)
-    items: list[str] = []
-    try:
-        for raw_line in target_file.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                parsed = json.loads(line)
-                text = str(parsed.get("text", "")).strip()
-            except Exception:
-                text = line
-            if text:
-                items.append(text)
-    except OSError:
-        return []
-    deduped = _dedupe_keep_order(items)
-    return deduped[-max(1, int(limit)) :]
+    return _read_recent_welcome_entries(session_id=session_id, limit=limit)
 
 
 def get_user_specific_welcome_memory(
@@ -124,8 +155,7 @@ def record_welcome_word(session_id: str, text: str) -> list[str]:
         return _read_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
 
     with _MEMORY_LOCK:
-        items = _read_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
-        items = [item for item in items if item != normalized]
+        items = _read_recent_welcome_entries(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
         items.append(normalized)
         items = items[-_WELCOME_HISTORY_MAX_ITEMS:]
 
@@ -151,7 +181,8 @@ def pick_welcome_text(
     fallback_welcome = _normalize_welcome_text(fallback_text or _DEFAULT_WELCOME)
     sayings = _read_sayings()
     recent_items = get_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
-    candidates = [item for item in sayings if item not in recent_items]
+    recent_keys = {_canonicalize_welcome_text(item) for item in recent_items}
+    candidates = [item for item in sayings if _canonicalize_welcome_text(item) not in recent_keys]
 
     selected = fallback_welcome
     if candidates:
