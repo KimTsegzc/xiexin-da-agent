@@ -7,6 +7,7 @@ import re
 import sys
 from email.mime.text import MIMEText
 from pathlib import Path
+from typing import Iterable
 
 
 def _ensure_repo_root_on_path_for_direct_run() -> None:
@@ -29,6 +30,7 @@ else:
 
 DEBUG_DEFAULT_SUBJECT = "XIEXin backend test email"
 DEBUG_DEFAULT_BODY = "This is a test email sent by Backend.integrations.email_sender."
+_AI_AGENT_EMAIL_FOOTER = "——本邮件为AI agent发出（来源xiexin1.gd）"
 
 
 class EmailSenderError(RuntimeError):
@@ -36,19 +38,46 @@ class EmailSenderError(RuntimeError):
 
 
 _EMAIL_ADDRESS_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+_RECEIVER_SPLIT_RE = re.compile(r"[\s,，;；]+")
 
 
-def _resolve_receiver(receiver: str | None, email_settings: EmailSettings) -> str:
-    resolved_receiver = (receiver or email_settings.default_receiver or "").strip()
-    if not resolved_receiver:
+def _normalize_receiver_input(receiver: str | Iterable[str] | None) -> list[str]:
+    if receiver is None:
+        return []
+
+    if isinstance(receiver, str):
+        candidates = [item.strip() for item in _RECEIVER_SPLIT_RE.split(receiver) if item.strip()]
+    else:
+        candidates = []
+        for item in receiver:
+            candidates.extend(_normalize_receiver_input(str(item or "")))
+
+    unique_candidates: list[str] = []
+    seen: set[str] = set()
+    for item in candidates:
+        normalized = item.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_candidates.append(normalized)
+    return unique_candidates
+
+
+def _resolve_receivers(receiver: str | Iterable[str] | None, email_settings: EmailSettings) -> list[str]:
+    resolved_receivers = _normalize_receiver_input(receiver)
+    if not resolved_receivers:
+        resolved_receivers = _normalize_receiver_input(email_settings.default_receiver)
+    if not resolved_receivers:
         raise EmailSenderError(
             "Missing email receiver. Pass receiver explicitly or set EMAIL_DEFAULT_RECEIVER."
         )
-    if not _EMAIL_ADDRESS_RE.fullmatch(resolved_receiver):
+    for resolved_receiver in resolved_receivers:
+        if _EMAIL_ADDRESS_RE.fullmatch(resolved_receiver):
+            continue
         raise EmailSenderError(
             f"Invalid receiver email address: {resolved_receiver}. Please provide a full email like user@example.com."
         )
-    return resolved_receiver
+    return resolved_receivers
 
 
 def _validate_email_settings(email_settings: EmailSettings) -> None:
@@ -74,13 +103,22 @@ def _build_message(*, sender: str, receiver: str, subject: str, body: str) -> MI
     return msg
 
 
+def _append_agent_footer(body: str) -> str:
+    normalized_body = (body or "").rstrip()
+    if normalized_body.endswith(_AI_AGENT_EMAIL_FOOTER):
+        return normalized_body
+    if not normalized_body:
+        return _AI_AGENT_EMAIL_FOOTER
+    return f"{normalized_body}\n\n{_AI_AGENT_EMAIL_FOOTER}"
+
+
 def send_text_email(
     *,
     subject: str,
     body: str,
-    receiver: str | None = None,
+    receiver: str | Iterable[str] | None = None,
     settings: Settings | None = None,
-) -> dict[str, str | int | bool]:
+) -> dict[str, str | int | bool | list[str]]:
     """Send a plain text email using SMTP settings from environment/.env."""
     resolved_settings = settings or get_settings()
     email_settings = get_email_settings(resolved_settings)
@@ -91,12 +129,14 @@ def send_text_email(
     smtp_host = str(email_settings.smtp_host).strip()
     smtp_port = int(email_settings.smtp_port)
     timeout_seconds = float(email_settings.timeout_seconds)
-    resolved_receiver = _resolve_receiver(receiver, email_settings)
+    resolved_receivers = _resolve_receivers(receiver, email_settings)
+    resolved_receiver_display = ", ".join(resolved_receivers)
+    final_body = _append_agent_footer(body)
     message = _build_message(
         sender=sender,
-        receiver=resolved_receiver,
+        receiver=resolved_receiver_display,
         subject=(subject or "").strip(),
-        body=body,
+        body=final_body,
     )
 
     try:
@@ -108,13 +148,13 @@ def send_text_email(
                 context=ssl.create_default_context(),
             ) as server:
                 server.login(sender, auth_code)
-                server.sendmail(sender, [resolved_receiver], message.as_string())
+                server.sendmail(sender, resolved_receivers, message.as_string())
         else:
             with smtplib.SMTP(smtp_host, smtp_port, timeout=timeout_seconds) as server:
                 if email_settings.use_starttls:
                     server.starttls(context=ssl.create_default_context())
                 server.login(sender, auth_code)
-                server.sendmail(sender, [resolved_receiver], message.as_string())
+                server.sendmail(sender, resolved_receivers, message.as_string())
     except (TimeoutError, OSError, smtplib.SMTPException, UnicodeEncodeError) as exc:
         raise EmailSenderError(f"Failed to send email via SMTP: {exc}") from exc
 
@@ -122,7 +162,8 @@ def send_text_email(
         "ok": True,
         "smtp_host": smtp_host,
         "smtp_port": smtp_port,
-        "receiver": resolved_receiver,
+        "receiver": resolved_receiver_display,
+        "receivers": resolved_receivers,
         "subject": (subject or "").strip(),
         "transport": "ssl" if email_settings.use_ssl else "starttls" if email_settings.use_starttls else "plain",
     }
@@ -136,9 +177,9 @@ class EmailSender:
         *,
         subject: str,
         body: str,
-        receiver: str | None = None,
+        receiver: str | Iterable[str] | None = None,
         settings: Settings | None = None,
-    ) -> dict[str, str | int | bool]:
+    ) -> dict[str, str | int | bool | list[str]]:
         return send_text_email(
             subject=subject,
             body=body,

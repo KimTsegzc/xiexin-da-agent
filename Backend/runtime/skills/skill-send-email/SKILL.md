@@ -30,9 +30,11 @@ description: 'Use when the user explicitly asks to send an email and provides or
 - 成功：返回“邮件已发送”并带收件人、主题、传输通道。
 - 失败：返回失败原因，便于前端展示或重试。
 - 参数缺失：返回规范化使用提示，指导前端补齐字段。
+- 发送前确认：正文编排完成后，先展示收件人确认提示；用户回复“是”才真正发送，回复“否”则取消。
 
 ## Runtime Notes
 - 实际发送能力通过 `Backend.integrations.email_sender` 执行。
 - 遵循 SMTP 配置开关，未启用时返回明确错误。
+- 支持多人收件人，可同时传多个邮箱或联系人姓名。
 - 支持联系人查转：优先从 `data/contacts.json` 将人名/别名转换为邮箱地址。
 - 查转策略：精确匹配 > 文本命中 > 轻量模糊匹配（用于小范围错别字兜底）。

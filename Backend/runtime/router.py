@@ -8,6 +8,7 @@ from .. import LLMProvider
 from ..settings import get_settings
 from .contracts import AgentRequest
 from .registry import SkillRegistry
+from .skills.skill_send_email import has_pending_email_confirmation
 from .skills.base import SkillDescriptor
 
 
@@ -15,7 +16,7 @@ _ROUTER_PROMPT = (
     "你是智能体技能路由器。你的唯一任务是在已注册技能中选择一个最合适的技能。\n"
     "必须使用 tool calling 调用 select_skill，不能直接输出自然语言答案。\n"
     "如果用户明确要求发送邮件、代发通知邮件、给某个邮箱发主题和正文，优先选择 send_email。\n"
-    "如果问题是普通闲聊、开放问答、外部机构客服电话、外部保险公司、外部律师、监管热线、通用建议，优先选择 direct_chat。\n"
+    "如果问题是普通闲聊、开放问答、通用建议，优先选择 direct_chat。\n"
     "只有当用户明确在问行内内部职能分工、哪个部门/岗位/负责人承接、内部接口人、办公号码时，才选择 skill_ccb_get_handler。\n"
     "如果不确定，选择 direct_chat，不要冒进。\n\n"
     "以下是当前可用技能说明：\n"
@@ -111,6 +112,9 @@ _SEND_EMAIL_INTENT_RE = re.compile(
 
 
 def _is_send_email_intent(request: AgentRequest) -> bool:
+    if has_pending_email_confirmation(request.session_id):
+        return True
+
     metadata = request.metadata if isinstance(request.metadata, dict) else {}
     email_meta = metadata.get("email") if isinstance(metadata.get("email"), dict) else metadata
     if isinstance(email_meta, dict):

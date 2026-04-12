@@ -140,13 +140,32 @@ def _extract_tool_calls(message) -> list[dict[str, Any]]:
     return calls
 
 
+def _build_runtime_system_tail(now: Optional[datetime] = None) -> str:
+    current = now or datetime.now()
+    return f"今天是“{current.strftime('%Y年%m月%d日')}”，现在是“{current.strftime('%H:%M')}”"
+
+
+def _attach_runtime_system_tail(messages: list[dict], now: Optional[datetime] = None) -> list[dict]:
+    runtime_tail = _build_runtime_system_tail(now)
+    normalized_messages = [dict(message) for message in messages]
+    for index, message in enumerate(normalized_messages):
+        if str(message.get("role") or "").strip() != "system":
+            continue
+        content = str(message.get("content") or "").rstrip()
+        if runtime_tail in content:
+            return normalized_messages
+        normalized_messages[index]["content"] = f"{content}\n\n{runtime_tail}" if content else runtime_tail
+        return normalized_messages
+    return [{"role": "system", "content": runtime_tail}, *normalized_messages]
+
+
 def _build_messages(settings: Settings, user_input: str) -> list[dict]:
-    now = datetime.now()
-    date_ctx = f"当前系统时间：{now.strftime('%Y年%m月%d日 %H:%M')}\n\n"
-    return [
-        {"role": "system", "content": date_ctx + load_system_prompt()},
-        {"role": "user", "content": user_input},
-    ]
+    return _attach_runtime_system_tail(
+        [
+            {"role": "system", "content": load_system_prompt()},
+            {"role": "user", "content": user_input},
+        ]
+    )
 
 
 def _create_chat_completion(
@@ -172,9 +191,10 @@ def _create_chat_completion(
     extra_body = _build_extra_body(resolved_enable_search)
     if extra_body_override:
         extra_body.update(extra_body_override)
+    normalized_messages = _attach_runtime_system_tail(messages)
     create_kwargs: dict[str, Any] = {
         "model": model_name,
-        "messages": messages,
+        "messages": normalized_messages,
         "stream": stream,
         "extra_body": extra_body,
         **request_options,

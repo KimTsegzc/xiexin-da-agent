@@ -11,11 +11,18 @@ from .... import LLMProvider
 from ....integrations.email_sender import EmailSender, EmailSenderError
 from ...contracts import AgentRequest, AgentResponse
 from ..base import BaseSkill
+from .pending_confirmation import (
+    clear_pending_email_confirmation,
+    load_pending_email_confirmation,
+    save_pending_email_confirmation,
+)
 
 
 _EMAIL_ADAPTER_MODEL = "qwen-turbo"
 _EMAIL_ADDRESS_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _MAIL_HISTORY_QUERY_RE = re.compile(r"已发送|发过.*邮件|邮件记录|邮件历史|我刚发了哪些邮件", re.IGNORECASE)
+_CONFIRM_SEND_YES_RE = re.compile(r"^(是|好|好的|确认|确认发送|发吧|发送|可以|行|嗯|yes|y)$", re.IGNORECASE)
+_CONFIRM_SEND_NO_RE = re.compile(r"^(否|不|不要|取消|不用了|不发了|no|n)$", re.IGNORECASE)
 _BODY_COMMAND_LIKE_RE = re.compile(
     r"^(发|发送|帮我|请|给|整理|汇总|总结|列举|梳理|分析).*(邮件|发给|报告|整理|汇总|列举|邮箱)?",
     re.IGNORECASE,
@@ -26,6 +33,7 @@ _RICH_BODY_REQUEST_RE = re.compile(
 )
 _CONTACT_FILE = Path(__file__).resolve().parent / "data" / "contacts.json"
 _CONTACT_SPLIT_RE = re.compile(r"[\s,，。.:：;；()（）\[\]【】<>《》'\"/\\|]+")
+_MULTI_RECEIVER_SPLIT_RE = re.compile(r"\s*(?:,|，|;|；|、|\n|和|及|以及|还有)\s*")
 
 
 def _resolve_skill_model(request: AgentRequest) -> str:
@@ -123,6 +131,35 @@ def _extract_receiver_from_text(text: str) -> str | None:
     return match.group(0).strip() or None
 
 
+def _extract_receivers_from_text(text: str) -> list[str]:
+    receivers: list[str] = []
+    for match in _EMAIL_ADDRESS_RE.findall(text or ""):
+        normalized = str(match or "").strip()
+        if normalized and normalized not in receivers:
+            receivers.append(normalized)
+    return receivers
+
+
+def _split_receiver_tokens(text: str | None) -> list[str]:
+    stripped = str(text or "").strip()
+    if not stripped:
+        return []
+    parts = [item.strip() for item in _MULTI_RECEIVER_SPLIT_RE.split(stripped) if item.strip()]
+    return parts or [stripped]
+
+
+def _dedupe_text_list(items: list[str]) -> list[str]:
+    unique_items: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        normalized = str(item or "").strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_items.append(normalized)
+    return unique_items
+
+
 def _normalize_contact_key(text: str) -> str:
     value = (text or "").strip().lower()
     value = re.sub(r"[\s\-_.·]", "", value)
@@ -181,59 +218,62 @@ def _build_contact_maps(contacts: list[dict[str, Any]]) -> tuple[dict[str, dict[
     return by_key, keywords
 
 
-def _resolve_receiver_from_contacts(receiver: str | None, raw_input: str) -> tuple[str | None, dict[str, Any]]:
+def _resolve_receivers_from_contacts(receiver: str | None, raw_input: str) -> tuple[list[str], dict[str, Any]]:
     contacts = _load_contacts()
+    receiver_tokens = _split_receiver_tokens(receiver)
+    resolved_receivers = _dedupe_text_list(receiver_tokens + _extract_receivers_from_text(raw_input if not receiver_tokens else ""))
+
     if not contacts:
-        return receiver, {"contact_resolved": False, "contact_match": "none"}
+        explicit_emails = _dedupe_text_list(_extract_receivers_from_text(receiver or "") + _extract_receivers_from_text(raw_input))
+        if explicit_emails:
+            return explicit_emails, {"contact_resolved": False, "contact_match": "already_email"}
+        return resolved_receivers, {"contact_resolved": False, "contact_match": "none"}
 
     by_key, keywords = _build_contact_maps(contacts)
+    matched_names: list[str] = []
+    match_types: list[str] = []
+    unresolved_tokens: list[str] = []
 
-    # 1) receiver 已是邮箱，直接通过。
-    if receiver and _EMAIL_ADDRESS_RE.fullmatch(receiver.strip()):
-        return receiver, {"contact_resolved": False, "contact_match": "already_email"}
+    def _append_contact_email(email_value: str | None, *, contact_name: str | None = None, match_type: str | None = None) -> None:
+        email_text = str(email_value or "").strip()
+        if not email_text or email_text in resolved_receivers:
+            return
+        resolved_receivers.append(email_text)
+        if contact_name and contact_name not in matched_names:
+            matched_names.append(contact_name)
+        if match_type and match_type not in match_types:
+            match_types.append(match_type)
 
-    # 2) receiver 作为人名精确匹配。
-    receiver_text = str(receiver or "").strip()
-    if receiver_text:
-        hit = by_key.get(_normalize_contact_key(receiver_text))
+    for email_value in _extract_receivers_from_text(receiver or "") + _extract_receivers_from_text(raw_input):
+        _append_contact_email(email_value, match_type="already_email")
+
+    for token in receiver_tokens:
+        if _EMAIL_ADDRESS_RE.fullmatch(token):
+            _append_contact_email(token, match_type="already_email")
+            continue
+        hit = by_key.get(_normalize_contact_key(token))
         if hit:
-            return str(hit.get("email") or "").strip() or receiver, {
-                "contact_resolved": True,
-                "contact_match": "receiver_exact",
-                "contact_name": hit.get("name"),
-            }
+            _append_contact_email(hit.get("email"), contact_name=str(hit.get("name") or "").strip(), match_type="receiver_exact")
+            continue
+        close = difflib.get_close_matches(_normalize_contact_key(token), list(by_key.keys()), n=1, cutoff=0.82)
+        if close:
+            hit = by_key.get(close[0])
+            if hit:
+                _append_contact_email(hit.get("email"), contact_name=str(hit.get("name") or "").strip(), match_type="fuzzy")
+                continue
+        unresolved_tokens.append(token)
 
-    # 3) 在用户原文中做姓名/别名命中。
     text = raw_input or ""
     for keyword, hit in keywords:
         if keyword and keyword in text:
-            return str(hit.get("email") or "").strip() or receiver, {
-                "contact_resolved": True,
-                "contact_match": "text_contains",
-                "contact_name": hit.get("name"),
-            }
+            _append_contact_email(hit.get("email"), contact_name=str(hit.get("name") or "").strip(), match_type="text_contains")
 
-    # 4) 轻量模糊匹配（用于“谢新”“龙将”这类轻微输错）。
-    tokens = [token for token in _CONTACT_SPLIT_RE.split(text) if token]
-    if receiver_text:
-        tokens.append(receiver_text)
-    candidates = [_normalize_contact_key(token) for token in tokens if token]
-    keys = list(by_key.keys())
-    for candidate in candidates:
-        if not candidate:
-            continue
-        close = difflib.get_close_matches(candidate, keys, n=1, cutoff=0.82)
-        if not close:
-            continue
-        hit = by_key.get(close[0])
-        if hit:
-            return str(hit.get("email") or "").strip() or receiver, {
-                "contact_resolved": True,
-                "contact_match": "fuzzy",
-                "contact_name": hit.get("name"),
-            }
-
-    return receiver, {"contact_resolved": False, "contact_match": "none"}
+    return resolved_receivers, {
+        "contact_resolved": bool(matched_names),
+        "contact_match": ",".join(match_types) if match_types else "none",
+        "contact_names": matched_names,
+        "unresolved_receivers": unresolved_tokens,
+    }
 
 
 def _adapt_email_request_with_llm(request: AgentRequest, model_name: str) -> dict[str, str] | None:
@@ -284,15 +324,15 @@ def _adapt_email_request_with_llm(request: AgentRequest, model_name: str) -> dic
 def _build_usage_tip() -> str:
     return (
         "我可以直接帮你发邮件，再补一句就能发出：\n"
-        "比如：发给 xiexin1.gd@ccb.com，主题“伊朗局势报告”，正文写昨天三点变化。\n"
-        "或者：给 xx@ccb.com 发会议提醒，说明明早9点五楼会议室。"
+        "比如：发给 xiexin1.gd@ccb.com 和 longjiang.gd@ccb.com，主题“伊朗局势报告”，正文写昨天三点变化。\n"
+        "或者：给 xx@ccb.com、yy@ccb.com 发会议提醒，说明明早9点五楼会议室。"
     )
 
 
 def _build_missing_receiver_tip() -> str:
     return (
         "我已经进入邮件发送技能了，但还缺明确收件人。\n"
-        "你可以直接给邮箱地址，或说联系人姓名，例如：发给谢鑫，整理昨天伊朗局势三点更新并附来源。"
+        "你可以直接给一个或多个邮箱地址，或说联系人姓名，例如：发给谢鑫和龙江，整理昨天伊朗局势三点更新并附来源。"
     )
 
 
@@ -361,9 +401,9 @@ def _refine_email_body_with_llm(
     structure_requirement = (
         "要求：至少3句话；包含背景、要点和结尾。"
         if not require_rich_body
-        else "要求：必须写成可直接发送的完整邮件正文，至少4句话，并包含开场说明、3个独立要点和收尾判断；各要点尽量单独成句。"
+        else "要求：必须写成可直接发送的完整邮件正文，至少10句话（500字），并包含开场说明、3个独立要点和收尾判断；各要点尽量单独成句。"
     )
-    source_requirement = "如果用户要求附来源或最新动态，请尽量联网补充可靠信息，并在正文中自然写出来源线索。"
+    source_requirement = "请尽量联网用今天搜到最新的可靠信息，并在正文中自然写出来源线索。"
     system_prompt = (
         "你是邮件正文润色助手。"
         "请将用户意图改写成可直接发送的正式中文邮件正文。"
@@ -440,6 +480,92 @@ def _explain_email_failure_with_llm(
     return explanation or None
 
 
+def _normalize_confirmation_reply(text: str) -> str:
+    value = _strip_user_prefix(text)
+    return re.sub(r"[\s，。；;：:!?！？]", "", value).strip().lower()
+
+
+def _build_receiver_confirmation_prompt(receivers: list[str], *, repeated: bool = False) -> str:
+    opening = "我编好内容了，帮我确认一下收件人，我怕打扰到大家~" if not repeated else "我还在等你确认收件人，怕打扰到大家~"
+    return (
+        f"{opening}\n"
+        f"收件人：{'，'.join(receivers) or '未识别'}\n"
+        "回复“是”发送，回复“否”取消。"
+    )
+
+
+def _send_email_and_build_response(
+    *,
+    request: AgentRequest,
+    skill_name: str,
+    skill_model: str,
+    subject: str,
+    body: str,
+    receivers: list[str],
+    base_metrics: dict[str, Any],
+) -> AgentResponse:
+    try:
+        result = EmailSender.send_text(
+            subject=subject,
+            body=body,
+            receiver=receivers,
+        )
+    except EmailSenderError as exc:
+        failure_reason = str(exc)
+        llm_failure_explanation = _explain_email_failure_with_llm(
+            error_text=failure_reason,
+            receiver=", ".join(receivers),
+            subject=subject,
+            request=request,
+            model_name=skill_model,
+        )
+        content = f"邮件发送失败：{failure_reason}"
+        if llm_failure_explanation:
+            content = f"邮件发送失败。\n{llm_failure_explanation}\n\n原始错误：{failure_reason}"
+        return AgentResponse(
+            content=content,
+            metrics={
+                "skill": skill_name,
+                "send_email": {
+                    "ok": False,
+                    "reason": failure_reason,
+                    "receiver": ", ".join(receivers),
+                    "receivers": receivers,
+                    "subject": subject,
+                    **base_metrics,
+                    "llm_failure_explainer_used": bool(llm_failure_explanation),
+                    "llm_failure_explainer_model": skill_model,
+                },
+            },
+        )
+
+    final_receiver = str(result.get("receiver") or ", ".join(receivers))
+    final_subject = str(result.get("subject") or subject)
+    transport = str(result.get("transport") or "")
+    sent_at = datetime.now().strftime("%y年%m月%d日，%H:%M:%S")
+    return AgentResponse(
+        content=(
+            "邮件已发送。\n"
+            f"收件人：{final_receiver or '未返回'}\n"
+            f"主题：{final_subject}\n"
+            f"发送时间: {sent_at}"
+        ),
+        metrics={
+            "skill": skill_name,
+            "send_email": {
+                "ok": True,
+                "receiver": final_receiver,
+                "receivers": result.get("receivers") or receivers,
+                "subject": final_subject,
+                "transport": transport,
+                "smtp_host": result.get("smtp_host"),
+                "smtp_port": result.get("smtp_port"),
+                **base_metrics,
+            },
+        },
+    )
+
+
 class SendEmailSkill(BaseSkill):
     name = "send_email"
     display_name = "邮件发送"
@@ -465,9 +591,63 @@ class SendEmailSkill(BaseSkill):
         yield {"type": "done", "content": response.content, "metrics": response.metrics}
 
     def run_once(self, request: AgentRequest) -> AgentResponse:
-        subject, body, receiver, compose_hints = _parse_email_request(request)
         raw_input = _strip_user_prefix(request.user_input)
         skill_model = _resolve_skill_model(request)
+        pending_confirmation = load_pending_email_confirmation(request.session_id)
+        if pending_confirmation:
+            confirmation_reply = _normalize_confirmation_reply(raw_input)
+            receivers = [str(item or "").strip() for item in pending_confirmation.get("receivers") or [] if str(item or "").strip()]
+            if _CONFIRM_SEND_YES_RE.fullmatch(confirmation_reply):
+                clear_pending_email_confirmation(request.session_id)
+                return _send_email_and_build_response(
+                    request=request,
+                    skill_name=self.name,
+                    skill_model=skill_model,
+                    subject=str(pending_confirmation.get("subject") or "").strip(),
+                    body=str(pending_confirmation.get("body") or "").strip(),
+                    receivers=receivers,
+                    base_metrics={
+                        **(pending_confirmation.get("base_metrics") if isinstance(pending_confirmation.get("base_metrics"), dict) else {}),
+                        "confirmation_required": True,
+                        "confirmation_reply": "yes",
+                    },
+                )
+            if _CONFIRM_SEND_NO_RE.fullmatch(confirmation_reply):
+                clear_pending_email_confirmation(request.session_id)
+                return AgentResponse(
+                    content="好，这封邮件先不发了，已取消。",
+                    metrics={
+                        "skill": self.name,
+                        "send_email": {
+                            "ok": False,
+                            "reason": "user_cancelled",
+                            "receiver": "，".join(receivers),
+                            "receivers": receivers,
+                            "subject": str(pending_confirmation.get("subject") or "").strip(),
+                            **(pending_confirmation.get("base_metrics") if isinstance(pending_confirmation.get("base_metrics"), dict) else {}),
+                            "confirmation_required": True,
+                            "confirmation_reply": "no",
+                        },
+                    },
+                )
+            return AgentResponse(
+                content=_build_receiver_confirmation_prompt(receivers, repeated=True),
+                metrics={
+                    "skill": self.name,
+                    "send_email": {
+                        "ok": False,
+                        "reason": "confirmation_pending",
+                        "receiver": "，".join(receivers),
+                        "receivers": receivers,
+                        "subject": str(pending_confirmation.get("subject") or "").strip(),
+                        **(pending_confirmation.get("base_metrics") if isinstance(pending_confirmation.get("base_metrics"), dict) else {}),
+                        "confirmation_required": True,
+                        "confirmation_reply": "other",
+                    },
+                },
+            )
+
+        subject, body, receiver, compose_hints = _parse_email_request(request)
         field_sources = compose_hints.get("field_sources") if isinstance(compose_hints, dict) else {}
         explicit_body = bool(isinstance(field_sources, dict) and field_sources.get("body") in {"metadata", "json"})
         attachments = compose_hints.get("attachments") if isinstance(compose_hints, dict) else []
@@ -491,17 +671,17 @@ class SendEmailSkill(BaseSkill):
             )
 
         if not receiver:
-            receiver = _extract_receiver_from_text(raw_input)
+            receiver = ", ".join(_extract_receivers_from_text(raw_input)) or None
 
-        receiver, contact_metrics = _resolve_receiver_from_contacts(receiver=receiver, raw_input=raw_input)
+        receivers, contact_metrics = _resolve_receivers_from_contacts(receiver=receiver, raw_input=raw_input)
 
         llm_adapter_used = False
         llm_body_refiner_used = False
-        if not receiver or not subject or not body:
+        if not receivers or not subject or not body:
             adapted = _adapt_email_request_with_llm(request, model_name=skill_model)
             if adapted:
                 llm_adapter_used = True
-                if not receiver:
+                if not receivers:
                     receiver = str(adapted.get("receiver") or "").strip() or None
                 if not subject:
                     subject = str(adapted.get("subject") or "").strip()
@@ -510,11 +690,11 @@ class SendEmailSkill(BaseSkill):
                     body_generated_by_llm = bool(body)
 
         # LLM 可能回填人名而非邮箱，这里再次做联系人查转兜底。
-        receiver, post_adapter_contact_metrics = _resolve_receiver_from_contacts(receiver=receiver, raw_input=raw_input)
-        if post_adapter_contact_metrics.get("contact_resolved"):
+        receivers, post_adapter_contact_metrics = _resolve_receivers_from_contacts(receiver=receiver, raw_input=raw_input)
+        if post_adapter_contact_metrics.get("contact_resolved") or receivers:
             contact_metrics = post_adapter_contact_metrics
 
-        if not receiver:
+        if not receivers:
             return AgentResponse(
                 content=_build_missing_receiver_tip(),
                 metrics={
@@ -523,6 +703,7 @@ class SendEmailSkill(BaseSkill):
                         "ok": False,
                         "reason": "missing_receiver",
                         "receiver": receiver,
+                        "receivers": receivers,
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": skill_model,
                         "llm_body_refiner_used": llm_body_refiner_used,
@@ -576,7 +757,8 @@ class SendEmailSkill(BaseSkill):
                     "send_email": {
                         "ok": False,
                         "reason": "low_quality_body_blocked",
-                        "receiver": receiver,
+                        "receiver": "，".join(receivers),
+                        "receivers": receivers,
                         "subject": subject,
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": skill_model,
@@ -595,7 +777,8 @@ class SendEmailSkill(BaseSkill):
                     "send_email": {
                         "ok": False,
                         "reason": "missing_subject_or_body",
-                        "receiver": receiver,
+                        "receiver": "，".join(receivers),
+                        "receivers": receivers,
                         "llm_adapter_used": llm_adapter_used,
                         "llm_adapter_model": skill_model,
                         "llm_body_refiner_used": llm_body_refiner_used,
@@ -607,73 +790,57 @@ class SendEmailSkill(BaseSkill):
                 },
             )
 
-        try:
-            result = EmailSender.send_text(
-                subject=subject,
-                body=body,
-                receiver=receiver,
-            )
-        except EmailSenderError as exc:
-            failure_reason = str(exc)
-            llm_failure_explanation = _explain_email_failure_with_llm(
-                error_text=failure_reason,
-                receiver=receiver,
-                subject=subject,
-                request=request,
-                model_name=skill_model,
-            )
-            content = f"邮件发送失败：{failure_reason}"
-            if llm_failure_explanation:
-                content = f"邮件发送失败。\n{llm_failure_explanation}\n\n原始错误：{failure_reason}"
+        base_metrics = {
+            "llm_adapter_used": llm_adapter_used,
+            "llm_adapter_model": skill_model,
+            "llm_body_refiner_used": llm_body_refiner_used,
+            "attachment_count": len(attachments),
+            "memory_ref_count": len(memory_refs),
+            "implementation_hint": "大模型互联网搜索",
+            **contact_metrics,
+        }
+        pending_saved = save_pending_email_confirmation(
+            request.session_id,
+            {
+                "receivers": receivers,
+                "subject": subject,
+                "body": body,
+                "base_metrics": base_metrics,
+                "created_at": datetime.now().isoformat(timespec="seconds"),
+            },
+        )
+        if not pending_saved:
             return AgentResponse(
-                content=content,
+                content=(
+                    "我编好内容了，但当前会话没法保存二次确认状态，先没有继续发送。\n"
+                    "请在同一会话里重试一次。"
+                ),
                 metrics={
                     "skill": self.name,
                     "send_email": {
                         "ok": False,
-                        "reason": failure_reason,
-                        "receiver": receiver,
+                        "reason": "confirmation_state_unavailable",
+                        "receiver": "，".join(receivers),
+                        "receivers": receivers,
                         "subject": subject,
-                        "llm_adapter_used": llm_adapter_used,
-                        "llm_adapter_model": skill_model,
-                        "llm_body_refiner_used": llm_body_refiner_used,
-                        "attachment_count": len(attachments),
-                        "memory_ref_count": len(memory_refs),
-                        "implementation_hint": "大模型互联网搜索",
-                        **contact_metrics,
-                        "llm_failure_explainer_used": bool(llm_failure_explanation),
-                        "llm_failure_explainer_model": skill_model,
+                        **base_metrics,
+                        "confirmation_required": True,
                     },
                 },
             )
 
-        final_receiver = str(result.get("receiver") or receiver or "")
-        final_subject = str(result.get("subject") or subject)
-        transport = str(result.get("transport") or "")
-        sent_at = datetime.now().strftime("%y年%m月%d日，%H:%M:%S")
         return AgentResponse(
-            content=(
-                "邮件已发送。\n"
-                f"收件人：{final_receiver or '未返回'}\n"
-                f"主题：{final_subject}\n"
-                f"发送时间: {sent_at}"
-            ),
+            content=_build_receiver_confirmation_prompt(receivers),
             metrics={
                 "skill": self.name,
                 "send_email": {
-                    "ok": True,
-                    "receiver": final_receiver,
-                    "subject": final_subject,
-                    "transport": transport,
-                    "smtp_host": result.get("smtp_host"),
-                    "smtp_port": result.get("smtp_port"),
-                    "llm_adapter_used": llm_adapter_used,
-                    "llm_adapter_model": skill_model,
-                    "llm_body_refiner_used": llm_body_refiner_used,
-                    "attachment_count": len(attachments),
-                    "memory_ref_count": len(memory_refs),
-                    "implementation_hint": "大模型互联网搜索",
-                    **contact_metrics,
+                    "ok": False,
+                    "reason": "confirmation_pending",
+                    "receiver": "，".join(receivers),
+                    "receivers": receivers,
+                    "subject": subject,
+                    **base_metrics,
+                    "confirmation_required": True,
                 },
             },
         )
