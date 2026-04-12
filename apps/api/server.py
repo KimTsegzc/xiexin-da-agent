@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import cgi
 import importlib
 import json
 import os
@@ -24,6 +25,7 @@ def _ensure_repo_root_on_path_for_direct_run() -> None:
 
 _ensure_repo_root_on_path_for_direct_run()
 from Backend.features import add_comment, add_like, get_reactions, normalize_info_id, normalize_session_id, remove_like
+from Backend.features.shared_uploads import store_uploaded_file
 from Backend.integrations import SearchProvider, get_model_list
 from Backend.runtime import get_runtime
 from Backend.runtime.contracts import AgentRequest
@@ -34,6 +36,7 @@ from Prompt import welcome as welcome_assets
 STREAM_SERVER_HOST = "0.0.0.0"
 STREAM_SERVER_PORT = 8766
 GLOBAL_DEBUG_ENV = "XIEXIN_DEBUG"
+UPLOAD_OMNI_MODEL = "qwen3-omni-flash"
 
 _STREAM_SERVER = None
 _STREAM_SERVER_THREAD = None
@@ -198,6 +201,14 @@ def _normalize_user_input(user_input: str) -> str:
     return text if text.lower().startswith("user:") else f"user: {text}"
 
 
+def _resolve_request_model(model: object, metadata: dict | None) -> str | None:
+    requested_model = str(model or "").strip() or None
+    attachment_count = len(metadata.get("attachments") or []) if isinstance(metadata, dict) else 0
+    if attachment_count > 0:
+        return UPLOAD_OMNI_MODEL
+    return requested_model
+
+
 def ask_stream(
     user_input: str,
     model: Optional[str] = None,
@@ -257,6 +268,14 @@ def _build_handler():
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
             return json.loads(raw_body.decode("utf-8") or "{}")
+
+        def _read_multipart_form(self):
+            environ = {
+                "REQUEST_METHOD": "POST",
+                "CONTENT_TYPE": self.headers.get("Content-Type", ""),
+                "CONTENT_LENGTH": self.headers.get("Content-Length", "0"),
+            }
+            return cgi.FieldStorage(fp=self.rfile, headers=self.headers, environ=environ, keep_blank_values=True)
 
         def _write_json_response(self, payload: dict, status_code: int = 200) -> None:
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -377,6 +396,66 @@ def _build_handler():
         def do_POST(self):
             parsed = urlparse(self.path)
             path = parsed.path
+            if path == "/api/uploads":
+                try:
+                    form = self._read_multipart_form()
+                    session_id = normalize_session_id(form.getfirst("session_id", ""))
+                    raw_files = form["files"] if "files" in form else None
+                    if raw_files is None:
+                        files = []
+                    elif isinstance(raw_files, list):
+                        files = raw_files
+                    else:
+                        files = [raw_files]
+                    attachments = []
+                    for item in files:
+                        filename = str(getattr(item, "filename", "") or "").strip()
+                        file_handle = getattr(item, "file", None)
+                        if not filename or file_handle is None:
+                            continue
+                        content = file_handle.read()
+                        if not isinstance(content, (bytes, bytearray)) or not content:
+                            continue
+                        attachments.append(
+                            store_uploaded_file(
+                                filename=filename,
+                                content=bytes(content),
+                                content_type=str(getattr(item, "type", "") or "").strip() or None,
+                                session_id=session_id,
+                            )
+                        )
+
+                    if not attachments:
+                        self._write_json_response(
+                            {
+                                "ok": False,
+                                "code": "UPLOAD_EMPTY",
+                                "message": "no files uploaded",
+                            },
+                            status_code=400,
+                        )
+                        return
+
+                    self._write_json_response(
+                        {
+                            "ok": True,
+                            "data": {
+                                "attachments": attachments,
+                                "session_id": session_id,
+                            },
+                        }
+                    )
+                except Exception as exc:
+                    self._write_json_response(
+                        {
+                            "ok": False,
+                            "code": "UPLOAD_FAILED",
+                            "message": str(exc),
+                        },
+                        status_code=500,
+                    )
+                return
+
             if path.startswith("/api/info/"):
                 parts = [part for part in path.split("/") if part]
                 if len(parts) != 4:
@@ -508,9 +587,9 @@ def _build_handler():
                 try:
                     payload = self._read_json_payload()
                     user_input = payload.get("user_input", "")
-                    model = payload.get("model")
                     session_id = normalize_session_id(payload.get("session_id"))
                     metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+                    model = _resolve_request_model(payload.get("model"), metadata)
                     request_started_at = datetime.now()
                     debug_requested = _is_global_debug_enabled(
                         debug_requested=(
@@ -589,10 +668,10 @@ def _build_handler():
             try:
                 payload = self._read_json_payload()
                 user_input = payload.get("user_input", "")
-                model = payload.get("model")
                 smooth = payload.get("smooth", True)
                 session_id = normalize_session_id(payload.get("session_id"))
                 metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+                model = _resolve_request_model(payload.get("model"), metadata)
                 request_started_at = datetime.now()
                 debug_requested = _is_global_debug_enabled(
                     debug_requested=(

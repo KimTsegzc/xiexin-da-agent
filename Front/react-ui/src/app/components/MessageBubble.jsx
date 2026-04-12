@@ -1,5 +1,13 @@
 import { renderMarkdown } from "../utils/markdown";
 
+function formatAttachmentSize(sizeBytes) {
+  const size = Number(sizeBytes || 0);
+  if (!size) return "";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function Metrics({ metrics }) {
   if (!metrics) return null;
   const firstToken = metrics.first_token_latency_seconds != null
@@ -35,6 +43,7 @@ function Metrics({ metrics }) {
 export function MessageBubble({ message }) {
   const showPendingSpinner = message.role === "assistant" && message.pending === true;
   const pendingLabel = message.pendingLabel || message.content || "处理中...";
+  const attachments = Array.isArray(message.attachments) ? message.attachments : [];
 
   return (
     <div className={`message-row ${message.role}`}>
@@ -48,8 +57,19 @@ export function MessageBubble({ message }) {
         {message.role === "assistant" && !showPendingSpinner ? (
           <div className="message-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }} />
         ) : (
-          message.role === "assistant" ? null : <div className="message-content">{message.content}</div>
+          message.role === "assistant" ? null : message.content ? <div className="message-content">{message.content}</div> : null
         )}
+        {attachments.length ? (
+          <div className="message-attachments">
+            {attachments.map((item, index) => (
+              <div key={`${item.name || 'file'}-${index}`} className="message-attachment-chip">
+                <span className="message-attachment-kind">{item.media_type === "image" ? "IMG" : "FILE"}</span>
+                <span className="message-attachment-name">{item.name || item.original_name || "未命名文件"}</span>
+                <span className="message-attachment-size">{formatAttachmentSize(item.size_bytes)}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <Metrics metrics={message.metrics} />
       </div>
     </div>

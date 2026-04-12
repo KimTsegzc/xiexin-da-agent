@@ -21,7 +21,9 @@ __pycache__/
 .streamlit/
 *.log
 *.pid
-Memory/short_term/
+Memory/app_space/
+Memory/user_specific/
+Memory/shared_space/uploads/
 
 # Editor state
 .vscode/

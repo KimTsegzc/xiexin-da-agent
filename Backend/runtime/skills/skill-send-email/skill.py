@@ -24,7 +24,7 @@ _RICH_BODY_REQUEST_RE = re.compile(
     r"更新|最新|局势|战局|分析|影响|报告|整理|汇总|总结|梳理|三点|要点|附来源|来源|简报|研判",
     re.IGNORECASE,
 )
-_CONTACT_FILE = Path(__file__).resolve().parent / "contact" / "contacts.json"
+_CONTACT_FILE = Path(__file__).resolve().parent / "data" / "contacts.json"
 _CONTACT_SPLIT_RE = re.compile(r"[\s,，。.:：;；()（）\[\]【】<>《》'\"/\\|]+")
 
 

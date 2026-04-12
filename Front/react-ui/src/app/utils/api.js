@@ -1,4 +1,4 @@
-import { CONFIG_PATH, INFO_REACTIONS_BASE_PATH, PROJECT_INFO_ID, STREAM_PATH } from "../constants";
+import { CONFIG_PATH, INFO_REACTIONS_BASE_PATH, PROJECT_INFO_ID, STREAM_PATH, UPLOAD_OMNI_MODEL, UPLOAD_PATH } from "../constants";
 
 const WELCOME_SESSION_STORAGE_KEY = "xiexin.welcome.session.id";
 
@@ -49,6 +49,34 @@ export function getClientSessionId() {
   return getOrCreateWelcomeSessionId();
 }
 
+async function uploadFilesToSharedSpace({ apiBase, files, sessionId }) {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file, file.name);
+  }
+  if (sessionId) {
+    formData.append("session_id", sessionId);
+  }
+
+  const response = await fetch(`${apiBase}${UPLOAD_PATH}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload?.message || `HTTP ${response.status}`);
+  }
+
+  return payload.data || {};
+}
+
 function createWelcomeSessionId() {
   return (
     (typeof window.crypto?.randomUUID === "function"
@@ -89,17 +117,38 @@ function parseEventLines(buffer, onEvent) {
   return remainder;
 }
 
-export async function streamChatResponse({ apiBase, userInput, model, onEvent }) {
+export async function streamChatResponse({ apiBase, userInput, model, files, onEvent }) {
   const debug = isDebugModeEnabled();
   const welcomeSessionId = getOrCreateWelcomeSessionId();
+  const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+  let metadata = {};
+  let resolvedModel = model || undefined;
+
+  if (selectedFiles.length) {
+    const uploadData = await uploadFilesToSharedSpace({
+      apiBase,
+      files: selectedFiles,
+      sessionId: welcomeSessionId || undefined,
+    });
+    metadata = {
+      attachments: Array.isArray(uploadData.attachments) ? uploadData.attachments : [],
+    };
+    resolvedModel = UPLOAD_OMNI_MODEL;
+    onEvent?.({
+      type: "upload",
+      attachments: metadata.attachments,
+    });
+  }
+
   const response = await fetch(withClientDebugQuery(`${apiBase}${STREAM_PATH}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_input: userInput,
       smooth: true,
-      model: model || undefined,
+      model: resolvedModel,
       session_id: welcomeSessionId || undefined,
+      metadata,
       debug,
     }),
   });

@@ -13,9 +13,10 @@ from ..settings import Settings, get_settings, load_summary_prompt, load_system_
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-_MEMORY_ROOT = REPO_ROOT / "Memory" / "short_term" / "chat_context"
-_HISTORY_DIR = _MEMORY_ROOT / "history"
-_SUMMARY_DIR = _MEMORY_ROOT / "summaries"
+_MEMORY_ROOT = REPO_ROOT / "Memory"
+_USER_SPECIFIC_ROOT = _MEMORY_ROOT / "user_specific" / "chat_context"
+_HISTORY_DIR = _USER_SPECIFIC_ROOT / "history"
+_SUMMARY_DIR = _USER_SPECIFIC_ROOT / "summaries"
 _MEMORY_LOCK = threading.Lock()
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 

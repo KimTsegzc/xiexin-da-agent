@@ -79,7 +79,19 @@ export default function App() {
     configReady,
     refreshFrontendConfig,
   } = useFrontendConfig(apiBase);
-  const { messages, input, setInput, loading, chatMode, handleSubmit, resetSession } = useChatSession({
+  const {
+    messages,
+    input,
+    setInput,
+    attachments,
+    appendAttachments,
+    removeAttachment,
+    effectiveComposerModel,
+    loading,
+    chatMode,
+    handleSubmit,
+    resetSession,
+  } = useChatSession({
     apiBase,
     selectedModel,
   });
@@ -211,11 +223,14 @@ export default function App() {
   const composerProps = {
     input,
     setInput,
+    attachments,
+    onAttachFiles: appendAttachments,
+    onRemoveAttachment: removeAttachment,
     handleSubmit: handleComposerSubmit,
     handleComposerKeyDown,
     loading,
     configReady,
-    selectedModel,
+    selectedModel: effectiveComposerModel,
     textareaRef,
     autoFocus: !chatMode && allowWelcomeAutoFocus,
   };

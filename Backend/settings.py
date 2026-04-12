@@ -16,6 +16,7 @@ AVAILABLE_MODELS: list[str] = [
     "qwen3.5-plus",
     "qwen3-max",
     "qwen3.5-flash",
+    "qwen3-omni-flash",
     "qwen-turbo",
     "glm-5"
 ]

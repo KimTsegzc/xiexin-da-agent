@@ -25,7 +25,7 @@ Tag: `V9.0`
 
 2. 欢迎语生成链路治理
 - API 层统一生成欢迎语，Prompt 层只保留资产和策略。
-- 引入 session 级短期记忆缓存：`Memory/short_term/welcome_cache/<session_id>.jsonl`。
+- 引入 session 级用户记忆缓存：`Memory/user_specific/welcome_cache/<session_id>.jsonl`。
 - welcome 请求返回可观测 debug payload（请求参数、分流、记忆、流式片段、延迟）。
 
 3. 热更新能力

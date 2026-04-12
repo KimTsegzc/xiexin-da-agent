@@ -14,9 +14,10 @@ from .conversation_context import normalize_session_id
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-_MEMORY_ROOT = REPO_ROOT / "Memory" / "short_term" / "info_reactions"
-_LIKES_DIR = _MEMORY_ROOT / "likes"
-_COMMENTS_DIR = _MEMORY_ROOT / "comments"
+_MEMORY_ROOT = REPO_ROOT / "Memory"
+_APP_SPACE_ROOT = _MEMORY_ROOT / "app_space" / "info_reactions"
+_LIKES_DIR = _APP_SPACE_ROOT / "likes"
+_COMMENTS_DIR = _APP_SPACE_ROOT / "comments"
 _REACTIONS_LOCK = threading.Lock()
 _INFO_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _COMMENT_MAX_LENGTH = 600

@@ -20,7 +20,7 @@ description: 'Use when asking which internal department, role, or owner in the b
 
 ## Input Contract
 - 输入是标准 `AgentRequest`。
-- 技能会读取 `Memory/long_term/ccb_handler_table.csv` 作为唯一职能依据。
+- 技能会读取 `data/ccb_handler_table.csv` 作为唯一职能依据。
 
 ## Output Contract
 固定输出五行：

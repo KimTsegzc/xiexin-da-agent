@@ -15,19 +15,21 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_WELCOME = "你好，我是鑫哥~"
 
 _MEMORY_ROOT = REPO_ROOT / "Memory"
-_SHORT_TERM_DIR = _MEMORY_ROOT / "short_term"
-_LONG_TERM_DIR = _MEMORY_ROOT / "long_term"
-_SHORT_TERM_WELCOME_CACHE_DIR = _SHORT_TERM_DIR / "welcome_cache"
-_SAYINGS_FILE = _LONG_TERM_DIR / "xiexin_sayings.json"
-_SHORT_TERM_MAX_ITEMS = 10
+_APP_SPACE_DIR = _MEMORY_ROOT / "app_space"
+_USER_SPECIFIC_DIR = _MEMORY_ROOT / "user_specific"
+_SHARED_SPACE_DIR = _MEMORY_ROOT / "shared_space"
+_USER_WELCOME_CACHE_DIR = _USER_SPECIFIC_DIR / "welcome_cache"
+_SAYINGS_FILE = _APP_SPACE_DIR / "xiexin_sayings.json"
+_WELCOME_HISTORY_MAX_ITEMS = 10
 _MEMORY_LOCK = threading.Lock()
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
 def _ensure_memory_layout() -> None:
-    _SHORT_TERM_DIR.mkdir(parents=True, exist_ok=True)
-    _SHORT_TERM_WELCOME_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    _LONG_TERM_DIR.mkdir(parents=True, exist_ok=True)
+    _APP_SPACE_DIR.mkdir(parents=True, exist_ok=True)
+    _USER_SPECIFIC_DIR.mkdir(parents=True, exist_ok=True)
+    _USER_WELCOME_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _SHARED_SPACE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def normalize_session_id(session_id: str | None) -> str | None:
@@ -44,7 +46,7 @@ def create_welcome_session_id() -> str:
 
 
 def _session_welcome_file(session_id: str) -> Path:
-    return _SHORT_TERM_WELCOME_CACHE_DIR / f"{session_id}.jsonl"
+    return _USER_WELCOME_CACHE_DIR / f"{session_id}.jsonl"
 
 
 def _normalize_welcome_text(text: str) -> str:
@@ -83,9 +85,9 @@ def _read_sayings() -> list[str]:
     return _dedupe_keep_order([str(item) for item in sayings])
 
 
-def _read_short_term_welcome_memory(
+def _read_user_specific_welcome_memory(
     session_id: str,
-    limit: int = _SHORT_TERM_MAX_ITEMS,
+    limit: int = _WELCOME_HISTORY_MAX_ITEMS,
 ) -> list[str]:
     _ensure_memory_layout()
     target_file = _session_welcome_file(session_id)
@@ -109,23 +111,23 @@ def _read_short_term_welcome_memory(
     return deduped[-max(1, int(limit)) :]
 
 
-def get_short_term_welcome_memory(
+def get_user_specific_welcome_memory(
     session_id: str,
-    limit: int = _SHORT_TERM_MAX_ITEMS,
+    limit: int = _WELCOME_HISTORY_MAX_ITEMS,
 ) -> list[str]:
-    return _read_short_term_welcome_memory(session_id=session_id, limit=limit)
+    return _read_user_specific_welcome_memory(session_id=session_id, limit=limit)
 
 
 def record_welcome_word(session_id: str, text: str) -> list[str]:
     normalized = _normalize_welcome_text(text)
     if not normalized:
-        return _read_short_term_welcome_memory(session_id=session_id, limit=_SHORT_TERM_MAX_ITEMS)
+        return _read_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
 
     with _MEMORY_LOCK:
-        items = _read_short_term_welcome_memory(session_id=session_id, limit=_SHORT_TERM_MAX_ITEMS)
+        items = _read_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
         items = [item for item in items if item != normalized]
         items.append(normalized)
-        items = items[-_SHORT_TERM_MAX_ITEMS:]
+        items = items[-_WELCOME_HISTORY_MAX_ITEMS:]
 
         _ensure_memory_layout()
         target_file = _session_welcome_file(session_id)
@@ -148,7 +150,7 @@ def pick_welcome_text(
 ) -> tuple[str, dict]:
     fallback_welcome = _normalize_welcome_text(fallback_text or _DEFAULT_WELCOME)
     sayings = _read_sayings()
-    recent_items = get_short_term_welcome_memory(session_id=session_id, limit=_SHORT_TERM_MAX_ITEMS)
+    recent_items = get_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
     candidates = [item for item in sayings if item not in recent_items]
 
     selected = fallback_welcome
@@ -161,11 +163,11 @@ def pick_welcome_text(
     return selected, {
         "source": "xiexin_sayings.json",
         "normalizedText": selected,
-        "recentWindowSize": _SHORT_TERM_MAX_ITEMS,
+        "recentWindowSize": _WELCOME_HISTORY_MAX_ITEMS,
         "recentHistory": recent_items,
         "candidateCount": len(candidates),
         "totalSayings": len(sayings),
-        "updatedShortTermMemory": updated_memory,
+        "updatedUserSpecificMemory": updated_memory,
     }
 
 
@@ -174,7 +176,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--session-id",
         default=None,
-        help="Optional welcome session id for isolated short-term memory.",
+        help="Optional welcome session id for isolated user-specific memory.",
     )
     parser.add_argument(
         "--fallback",

@@ -34,5 +34,5 @@ description: 'Use when the user explicitly asks to send an email and provides or
 ## Runtime Notes
 - 实际发送能力通过 `Backend.integrations.email_sender` 执行。
 - 遵循 SMTP 配置开关，未启用时返回明确错误。
-- 支持联系人查转：优先从 `contact/contacts.json` 将人名/别名转换为邮箱地址。
+- 支持联系人查转：优先从 `data/contacts.json` 将人名/别名转换为邮箱地址。
 - 查转策略：精确匹配 > 文本命中 > 轻量模糊匹配（用于小范围错别字兜底）。

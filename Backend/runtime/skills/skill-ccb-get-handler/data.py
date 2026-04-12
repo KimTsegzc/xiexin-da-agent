@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-TABLE_PATH = REPO_ROOT / "Memory" / "long_term" / "ccb_handler_table.csv"
+SKILL_ROOT = Path(__file__).resolve().parent
+TABLE_PATH = SKILL_ROOT / "data" / "ccb_handler_table.csv"
 EXPECTED_HEADERS = ("序号", "部门名称", "职务/科室", "姓名", "办公号码", "工作职责")
 _LEADERSHIP_TITLES = ("总经理", "副总经理", "主任", "副主任")
 _CACHE_LOCK = threading.Lock()
@@ -284,8 +284,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-TABLE_PATH = REPO_ROOT / "Memory" / "long_term" / "ccb_handler_table.csv"
+SKILL_ROOT = Path(__file__).resolve().parent
+TABLE_PATH = SKILL_ROOT / "data" / "ccb_handler_table.csv"
 EXPECTED_HEADERS = ("序号", "部门名称", "职务/科室", "姓名", "办公号码", "工作职责")
 _LEADERSHIP_TITLES = ("总经理", "副总经理", "主任", "副主任")
 _CACHE_LOCK = threading.Lock()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MAX_PERSISTED_MESSAGES, SESSION_STORAGE_KEY } from "../constants";
+import { MAX_PERSISTED_MESSAGES, SESSION_STORAGE_KEY, UPLOAD_OMNI_MODEL } from "../constants";
 import { isClientDebugEnabled, streamChatResponse } from "../utils/api";
 
 
@@ -74,8 +74,21 @@ export function useChatSession({ apiBase, selectedModel }) {
   const [messages, setMessages] = useState(sessionState.messages);
   const [chatMode, setChatMode] = useState(sessionState.chatMode);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
   const sessionVersionRef = useRef(0);
+
+  const effectiveComposerModel = attachments.length ? UPLOAD_OMNI_MODEL : selectedModel;
+
+  function appendAttachments(fileList) {
+    const nextFiles = Array.from(fileList || []).filter(Boolean);
+    if (!nextFiles.length) return;
+    setAttachments((current) => [...current, ...nextFiles]);
+  }
+
+  function removeAttachment(indexToRemove) {
+    setAttachments((current) => current.filter((_, index) => index !== indexToRemove));
+  }
 
   useEffect(() => {
     persistSession(messages);
@@ -83,21 +96,39 @@ export function useChatSession({ apiBase, selectedModel }) {
 
   async function submitMessage(submitValue) {
     const trimmed = submitValue.trim();
-    if (!trimmed || loading) return;
+    const selectedFiles = attachments.slice();
+    const promptText = trimmed || (selectedFiles.length ? "请帮我分析这次上传的内容。" : "");
+    if ((!promptText && !selectedFiles.length) || loading) return;
     const sessionVersion = sessionVersionRef.current;
 
-    const userMessage = { role: "user", content: trimmed };
+    const userMessage = {
+      role: "user",
+      content: promptText,
+      attachments: selectedFiles.map((file) => ({
+        name: file.name,
+        size_bytes: file.size,
+        content_type: file.type || "application/octet-stream",
+        media_type: (file.type || "").startsWith("image/") ? "image" : "file",
+      })),
+    };
     let assistantIndex = -1;
 
     setChatMode(true);
     setInput("");
+    setAttachments([]);
     setLoading(true);
     setMessages((current) => {
       assistantIndex = current.length + 1;
       return [
         ...current,
         userMessage,
-        { role: "assistant", content: "连接中", metrics: null, pending: true, pendingLabel: "连接中" },
+        {
+          role: "assistant",
+          content: selectedFiles.length ? "上传中" : "连接中",
+          metrics: null,
+          pending: true,
+          pendingLabel: selectedFiles.length ? "上传中" : "连接中",
+        },
       ];
     });
 
@@ -108,13 +139,22 @@ export function useChatSession({ apiBase, selectedModel }) {
     try {
       await streamChatResponse({
         apiBase,
-        userInput: trimmed,
+        userInput: promptText,
         model: selectedModel,
+        files: selectedFiles,
         onEvent: (eventPayload) => {
           if (sessionVersionRef.current !== sessionVersion) return;
 
           if (isClientDebugEnabled() && eventPayload.type === "debug") {
             console.log("[xiexin-debug] stream", eventPayload.payload || eventPayload);
+          }
+
+          if (eventPayload.type === "upload") {
+            const uploadedCount = Array.isArray(eventPayload.attachments) ? eventPayload.attachments.length : 0;
+            const uploadText = uploadedCount > 0 ? `已上传 ${uploadedCount} 个文件，正在理解内容` : "上传完成，正在理解内容";
+            setMessages((current) => current.map((message, index) => (
+              index === assistantIndex ? { ...message, content: uploadText, pending: true, pendingLabel: uploadText } : message
+            )));
           }
 
           if (eventPayload.type === "pulse") {
@@ -186,6 +226,7 @@ export function useChatSession({ apiBase, selectedModel }) {
     sessionVersionRef.current += 1;
     setMessages([]);
     setInput("");
+    setAttachments([]);
     setChatMode(false);
     setLoading(false);
     try {
@@ -204,6 +245,10 @@ export function useChatSession({ apiBase, selectedModel }) {
     messages,
     input,
     setInput,
+    attachments,
+    appendAttachments,
+    removeAttachment,
+    effectiveComposerModel,
     loading,
     chatMode,
     setChatMode,
