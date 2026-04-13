@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import re
 import threading
@@ -13,7 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-_DEFAULT_WELCOME = "因为山就在那里 🗻"
+_DEFAULT_WELCOME = "你好~我是广分谢鑫😀"
 
 _MEMORY_ROOT = REPO_ROOT / "Memory"
 _APP_SPACE_DIR = _MEMORY_ROOT / "app_space"
@@ -24,6 +25,7 @@ _SAYINGS_FILE = _APP_SPACE_DIR / "xiexin_sayings.json"
 _WELCOME_HISTORY_MAX_ITEMS = 10
 _MEMORY_LOCK = threading.Lock()
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_FIXED_DEFAULT_WELCOME_ENV = "XIEXIN_WELCOME_FIXED_DEFAULT"
 
 
 def _ensure_memory_layout() -> None:
@@ -173,12 +175,33 @@ def get_default_welcome() -> str:
     return _DEFAULT_WELCOME
 
 
+def is_fixed_default_welcome_enabled() -> bool:
+    env_value = os.getenv(_FIXED_DEFAULT_WELCOME_ENV, "1").strip().lower()
+    return env_value not in {"", "0", "false", "no", "off"}
+
+
 def pick_welcome_text(
     *,
     session_id: str,
     fallback_text: str | None = None,
 ) -> tuple[str, dict]:
     fallback_welcome = _normalize_welcome_text(fallback_text or _DEFAULT_WELCOME)
+
+    if is_fixed_default_welcome_enabled():
+        selected = _DEFAULT_WELCOME
+        return selected, {
+            "mode": "fixed-default",
+            "featureFlag": _FIXED_DEFAULT_WELCOME_ENV,
+            "featureFlagEnabled": True,
+            "source": "_DEFAULT_WELCOME",
+            "normalizedText": selected,
+            "recentWindowSize": _WELCOME_HISTORY_MAX_ITEMS,
+            "recentHistory": [],
+            "candidateCount": 0,
+            "totalSayings": 0,
+            "updatedUserSpecificMemory": [],
+        }
+
     sayings = _read_sayings()
     recent_items = get_user_specific_welcome_memory(session_id=session_id, limit=_WELCOME_HISTORY_MAX_ITEMS)
     recent_keys = {_canonicalize_welcome_text(item) for item in recent_items}
@@ -192,6 +215,9 @@ def pick_welcome_text(
 
     updated_memory = record_welcome_word(session_id=session_id, text=selected)
     return selected, {
+        "mode": "local-sayings-random",
+        "featureFlag": _FIXED_DEFAULT_WELCOME_ENV,
+        "featureFlagEnabled": False,
         "source": "xiexin_sayings.json",
         "normalizedText": selected,
         "recentWindowSize": _WELCOME_HISTORY_MAX_ITEMS,

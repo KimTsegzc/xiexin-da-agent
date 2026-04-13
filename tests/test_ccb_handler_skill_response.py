@@ -15,7 +15,7 @@ class CCBHandlerSkillResponseTests(unittest.TestCase):
             sequence="1",
             department="财务会计部",
             role="总经理",
-            owner_name="卢x昆",
+            owner_name="卢xx",
             office_phone="6618",
             responsibilities="负责部门全面工作",
         )

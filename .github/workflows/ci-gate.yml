@@ -8,6 +8,8 @@ on:
       - master
       - xiexin-vite-proto
       - agent-dev-*
+    tags:
+      - "V*"
 
 jobs:
   quality-gate:
@@ -43,6 +45,9 @@ jobs:
           assert isinstance(settings.base_url, str) and settings.base_url
           print("backend smoke check passed")
           PY
+
+      - name: Backend regression tests
+        run: python -m unittest discover -s tests -v
 
       - name: Setup Node
         uses: actions/setup-node@v4

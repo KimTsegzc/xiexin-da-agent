@@ -151,7 +151,6 @@ def _generate_hero_welcome_text(
     debug_enabled: bool = False,
     session_id: str,
 ) -> tuple[str, dict | None]:
-    default_welcome = welcome_assets.get_default_welcome()
     selected_text, selection_debug = welcome_assets.pick_welcome_text(
         session_id=session_id,
         fallback_text=wlcm_gen_prompt,
@@ -162,7 +161,7 @@ def _generate_hero_welcome_text(
         "enabled": True,
         "request": {
             "sessionId": session_id,
-            "mode": "local-sayings-random",
+            "mode": str((selection_debug or {}).get("mode", "local-sayings-random")),
         },
         "response": selection_debug,
         "error": None,

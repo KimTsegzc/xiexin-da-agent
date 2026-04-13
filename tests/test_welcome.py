@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -52,6 +53,20 @@ class WelcomeSelectionTests(unittest.TestCase):
         payload = [json.dumps({"text": item, "ts": index}, ensure_ascii=False) for index, item in enumerate(entries, start=1)]
         target.write_text("\n".join(payload), encoding="utf-8")
 
+    def test_pick_welcome_text_returns_fixed_default_by_default(self):
+        session_id = "fixed-default-session"
+        self._write_sayings([
+            "清风徐来，水波不兴 🍃",
+            "想象力比知识更重要 💡",
+        ])
+
+        selected, debug_payload = welcome.pick_welcome_text(session_id=session_id)
+
+        self.assertEqual(selected, "你好~我是广分谢鑫😀")
+        self.assertEqual(debug_payload["mode"], "fixed-default")
+        self.assertTrue(debug_payload["featureFlagEnabled"])
+        self.assertEqual(debug_payload["candidateCount"], 0)
+
     def test_pick_welcome_text_skips_legacy_history_without_emoji(self):
         session_id = "legacy-session"
         self._write_sayings([
@@ -60,10 +75,13 @@ class WelcomeSelectionTests(unittest.TestCase):
         ])
         self._write_history(session_id, ["清风徐来，水波不兴"])
 
-        with patch("Prompt.welcome.random.choice", side_effect=lambda items: items[0]):
-            selected, debug_payload = welcome.pick_welcome_text(session_id=session_id)
+        with patch.dict(os.environ, {"XIEXIN_WELCOME_FIXED_DEFAULT": "0"}, clear=False):
+            with patch("Prompt.welcome.random.choice", side_effect=lambda items: items[0]):
+                selected, debug_payload = welcome.pick_welcome_text(session_id=session_id)
 
         self.assertEqual(selected, "想象力比知识更重要 💡")
+        self.assertEqual(debug_payload["mode"], "local-sayings-random")
+        self.assertFalse(debug_payload["featureFlagEnabled"])
         self.assertEqual(debug_payload["candidateCount"], 1)
         self.assertEqual(debug_payload["recentHistory"], ["清风徐来，水波不兴"])
 

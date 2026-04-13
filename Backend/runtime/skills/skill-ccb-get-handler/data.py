@@ -26,6 +26,25 @@ def _compact_search_text(value: str) -> str:
     return re.sub(r"\s+", "", normalized.strip())
 
 
+def _mask_person_name(value: str) -> str:
+    normalized = _compact_text(value)
+    if not normalized:
+        return ""
+
+    masked_chars: list[str] = []
+    visible_char_count = 0
+    for char in normalized:
+        if char.isspace():
+            masked_chars.append(char)
+            continue
+        if visible_char_count == 0:
+            masked_chars.append(char)
+        else:
+            masked_chars.append("x")
+        visible_char_count += 1
+    return "".join(masked_chars)
+
+
 def _strip_list_prefix(value: str) -> str:
     return re.sub(r"^\s*[0-9０-９]+[.．、]\s*", "", value or "").strip()
 
@@ -108,7 +127,7 @@ def _format_chain_member(record: HandlerRecord | None, *, use_role_display: bool
     if record is None:
         return ""
     role = record.role_display if use_role_display else record.chain_role_display
-    return f"{record.owner_name}（{role}）"
+    return f"{_mask_person_name(record.owner_name)}（{role}）"
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,7 +174,7 @@ class CCBHandlerTable:
                         f"序号={record.sequence}",
                         f"部门={record.department}",
                         f"岗位={record.role}",
-                        f"负责人={record.owner_name}",
+                        f"负责人={_mask_person_name(record.owner_name)}",
                         f"办公号码={record.office_phone or '未提供'}",
                         f"部门总={chain.department_head or '未明确'}",
                         f"分管总={chain.supervising_head or '未明确'}",
@@ -264,7 +283,7 @@ def load_handler_table() -> CCBHandlerTable:
                     sequence=row[0],
                     department=_compact_text(row[1]),
                     role=_compact_text(row[2]),
-                    owner_name=_compact_text(row[3]),
+                    owner_name=_mask_person_name(row[3]),
                     office_phone=_compact_text(row[4]),
                     responsibilities=_compact_text(row[5]),
                 )
